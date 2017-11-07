@@ -1,0 +1,233 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#define MAXIMAL_OBJECTS_PER_VIEW 64
+#define ATLAS_TILE_SIZE 128
+#define ATLAS_OBJECT_SIZEEXPONENT_MIN 7 // 7^12 = ATLAS_TILE_SIZE, the minmal space an object can be in the atlas
+#define ATLAS_OBJECT_SIZEEXPONENT_MAX 12 // 2^12 = 4096, the maximal space an object can be in the atlas
+#define SINGLE_ROW_THREAD_SIZE 64
+#define BLOCK_THREAD_SIZE 8
+#pragma enable_d3d11_debug_symbols
+
+// --------common functions--------
+
+// Current VisiblityBufferLayout with RInt
+// r: 11bit objectID | 16bit primitiveID | 5 mipmap Level
+uint EncodeVisibilityBuffer(uint objectID, uint primitiveID, uint mipmapLevel)
+{
+    return objectID | primitiveID << 11 | mipmapLevel << 27;
+}
+
+void DecodeVisibilityBuffer(uint encodedValue, out uint objectID, out uint primitiveID, out uint mipmapLevel)
+{
+	objectID = encodedValue & 0x7FF; //objectID
+	primitiveID = (encodedValue >> 11) & 0xFFFF; //primitiveID
+	mipmapLevel = (encodedValue >> 27) & 0x1F; //mipmapLevel
+
+}
+
+struct ObjectToAtlasProperties
+{
+	uint objectID; // the original object ID, used to trace back the object after sorting
+	uint desiredAtlasSpace_axis; // the length of the texture inside the atlas
+	float4 atlas_ST; // scale and offset to transform uv coords into atlas space
+};
+
+//#include "TexelShading.cginc" // includes are broken!
+// common variables
+uint g_totalObjectsInView;
+RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
+RWStructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
+uint3 g_ScreenVertexID_dimension ;// x, y, x * y
+
+#pragma kernel ExtractCoverage
+Texture2D<int> g_ScreenVertexID;
+RWBuffer<float> g_VertexIDVisiblity;
+
+groupshared uint gshared_objectMipmapLevel[MAXIMAL_OBJECTS_PER_VIEW];
+[numthreads(SINGLE_ROW_THREAD_SIZE, 1,1)]
+void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+{
+	// initialize groupshared data
+	for(uint i = groupIndex; i < MAXIMAL_OBJECTS_PER_VIEW; i += SINGLE_ROW_THREAD_SIZE)
+	{
+		gshared_objectMipmapLevel[i] = 0;
+	}
+	AllMemoryBarrierWithGroupSync();
+
+	// due to groupshared variables I loop over all pixels here, instead of dispatching multiple thread groups
+	for (uint j = groupIndex; j < g_ScreenVertexID_dimension.z; j += SINGLE_ROW_THREAD_SIZE)
+	{
+		uint2 textureXY = uint2(j % g_ScreenVertexID_dimension.x, j / g_ScreenVertexID_dimension.x);
+		uint objectID = 0, primitiveID = 0, mipmapLevel = 0;
+		DecodeVisibilityBuffer(
+			g_ScreenVertexID[textureXY],
+			/*out*/ objectID,
+			/*out*/ primitiveID,
+			/*out*/ mipmapLevel); 
+
+		g_VertexIDVisiblity[EncodeVisibilityBuffer(objectID, primitiveID, 0)] = 1; //unlock primitve
+		InterlockedMax(gshared_objectMipmapLevel[objectID], mipmapLevel);
+	}
+
+	AllMemoryBarrierWithGroupSync();
+	// gather results
+	for(uint k = groupIndex; k < MAXIMAL_OBJECTS_PER_VIEW; k += SINGLE_ROW_THREAD_SIZE)
+	{
+		g_ObjectToAtlasProperties[k].objectID = k;
+		g_ObjectToAtlasProperties[k].desiredAtlasSpace_axis = gshared_objectMipmapLevel[k];
+	}
+}
+
+#pragma kernel DebugShowVertexID
+RWTexture2D<float4> g_DebugTexture;
+[numthreads(SINGLE_ROW_THREAD_SIZE,1,1)]
+void DebugShowVertexID (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+{
+	for(uint i = groupIndex; i < g_ScreenVertexID_dimension.z; i += SINGLE_ROW_THREAD_SIZE)
+	{
+		uint2 textureXY = uint2(i % g_ScreenVertexID_dimension.x, i / g_ScreenVertexID_dimension.x);
+		uint objectID, primitiveID, mipmapLevel;
+		DecodeVisibilityBuffer(
+			g_ScreenVertexID[textureXY],
+			/*out*/ objectID,
+			/*out*/ primitiveID,
+			/*out*/ mipmapLevel); 
+		float f = primitiveID;
+		g_DebugTexture[textureXY] = half4(sin(f / 2), sin(f / 512), sin(f / 16384), 0) * 0.5 + 0.5;
+	}	
+}
+
+//TODO: untested
+uint GetPrimitiveVisiblity(uint primitiveID, uint vis[MAXIMAL_OBJECTS_PER_VIEW])
+{
+	uint bitIndex = primitiveID % 32;
+	uint arrayIndex = floor(primitiveID / 32);
+	return (vis[arrayIndex] >> bitIndex) & 0x1;
+}
+
+//--------unitility--------
+
+//source: https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
+// "Insert" a 0 bit after each of the 16 low bits of x
+uint Part1By1(uint x)
+{
+	x &= 0x0000ffff;                  // x = ---- ---- ---- ---- fedc ba98 7654 3210
+	x = (x ^ (x << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
+	x = (x ^ (x << 4)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+	x = (x ^ (x << 2)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
+	x = (x ^ (x << 1)) & 0x55555555; // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+	return x;
+}
+
+// Inverse of Part1By1 - "delete" all odd-indexed bits
+uint Compact1By1(uint x)
+{
+	x &= 0x55555555;                  // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+	x = (x ^ (x >> 1)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
+	x = (x ^ (x >> 2)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+	x = (x ^ (x >> 4)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
+	x = (x ^ (x >> 8)) & 0x0000ffff; // x = ---- ---- ---- ---- fedc ba98 7654 3210
+	return x;
+}
+
+
+uint DecodeMorton2X(uint code) { return Compact1By1(code >> 0); }
+uint DecodeMorton2Y(uint code) { return Compact1By1(code >> 1); }
+
+// I use a morton / z-shape for atlas packing
+// this makes the packing very much straingth forward and the complexity for insertion is always o(1)
+// as long as the textures sizes are power-of-two (256, 512, 1024,...) and the largest textures are getting inserted first
+uint2 GetTilePosition(uint index)
+{
+    return uint2(DecodeMorton2X(index), DecodeMorton2Y(index));
+}
+
+float4 GetTextureRect(uint index, uint tilesPerAxis)
+{
+	float2 atlasPosition_tileSpace = GetTilePosition(index);
+    float2 min = atlasPosition_tileSpace * ATLAS_TILE_SIZE;
+    float2 max = min + tilesPerAxis * ATLAS_TILE_SIZE;
+
+	return float4(min, max);
+}
+
+float4 GetUVToAtlasScaleOffset(float4 atlasPixelSpace)
+{
+    return float4(atlasPixelSpace.zw - atlasPixelSpace.xy, atlasPixelSpace.xy);
+}
+
+
+#pragma kernel AtlasPacking
+uint atlas_sliceCount;
+uint g_atlasAxisSize;
+[numthreads(1,1,1)] 
+void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+{
+	// sort atlas objects by size (largest-smallest) so it fits the condition for a morton code packing
+
+	//TODO: use multithread radix sort
+	//simple bubble sort...
+	for (uint write = 0; write < g_totalObjectsInView; write++)
+	{
+		for (uint sort = 0; sort < g_totalObjectsInView - 1 ; sort++)
+		{
+			// check if next object is larger than current
+			if (g_ObjectToAtlasProperties[sort].desiredAtlasSpace_axis < 
+				g_ObjectToAtlasProperties[sort + 1].desiredAtlasSpace_axis)
+			{		
+				// swap next object with curent
+				ObjectToAtlasProperties temp = g_ObjectToAtlasProperties[sort + 1];				
+				g_ObjectToAtlasProperties[sort + 1] = g_ObjectToAtlasProperties[sort];
+				g_ObjectToAtlasProperties[sort] = temp;
+			}
+		}
+	}
+
+	AllMemoryBarrierWithGroupSync();
+	//TODO: muttihreading can't be used here, since the order of exectuion is crucial...
+	for(uint i = 0; i < g_totalObjectsInView; i++)
+	{
+		// TODO: can't use clamp() somehow...
+		uint objectTileAxisExponent = min(ATLAS_OBJECT_SIZEEXPONENT_MAX, g_ObjectToAtlasProperties[i].desiredAtlasSpace_axis);
+		objectTileAxisExponent = max(ATLAS_OBJECT_SIZEEXPONENT_MIN, objectTileAxisExponent );
+
+        uint objectTilesAxis = pow(2, objectTileAxisExponent) / ATLAS_TILE_SIZE;
+		g_ObjectToAtlasProperties[i].desiredAtlasSpace_axis = objectTilesAxis;
+        uint objectTilesTotal = objectTilesAxis * objectTilesAxis;
+		float4 atlasRect = GetTextureRect(atlas_sliceCount, objectTilesAxis);
+		g_ObjectToAtlasProperties[i].atlas_ST = GetUVToAtlasScaleOffset(atlasRect) / g_atlasAxisSize;
+
+		atlas_sliceCount += objectTilesTotal;
+	}
+	AllMemoryBarrierWithGroupSync();
+	// restore order, so the following passes will lookup the correct IDs
+	//TODO: the whole thing here is really bad pratice right now
+	bool foundMissmatch = true;
+	uint iterations = 0; // limit iterations, just in case
+	while (foundMissmatch && iterations < MAXIMAL_OBJECTS_PER_VIEW)
+	{
+		foundMissmatch = false;
+		for (uint i = 0; i < g_totalObjectsInView; i++)
+		{
+			uint usedID = g_ObjectToAtlasProperties[i].objectID;
+			if (usedID != i)
+			{
+				ObjectToAtlasProperties temp = g_ObjectToAtlasProperties[usedID];
+				g_ObjectToAtlasProperties[usedID] = g_ObjectToAtlasProperties[i];
+				g_ObjectToAtlasProperties[i] = temp;
+				foundMissmatch = true;
+			}
+		}
+		iterations++;
+	}
+}
+
+#pragma kernel CopyDataToPreFrameBuffer
+
+[numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
+void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+{
+	for (uint i = groupIndex; i < MAXIMAL_OBJECTS_PER_VIEW; i += SINGLE_ROW_THREAD_SIZE)
+	{
+		g_prev_ObjectToAtlasProperties[i] = g_ObjectToAtlasProperties[i];
+	}
+}
