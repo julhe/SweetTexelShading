@@ -7,17 +7,24 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.XR;
 
-
+class ComputeBufferWithData<T>
+{
+    public T[] data;
+    public ComputeBuffer buffer;
+}
 public class BasicRenderpipeline : RenderPipeline
 {
     public static BasicRenderpipeline instance;
     const string PIPELINE_NAME = "BasicRenderpipeline";
-    const int MAXIMAL_OBJECTS_PER_VIEW = 1024;
+    const int MAXIMAL_OBJECTS_PER_VIEW = 512;
+    const int SCREEN_MAX_X = 2048, SCREEN_MAX_Y = 2048;
+    const int COMPUTE_COVERAGE_TILE_SIZE = 8;
     static readonly ShaderPassName m_TexelSpacePass = new ShaderPassName("Texel Space Pass");
     static readonly ShaderPassName m_VistaPass = new ShaderPassName("Vista Pass");
     static readonly ShaderPassName m_CoveragePass = new ShaderPassName("Coverage Pass");
 
     public static Camera CURRENT_CAMERA { get; private set; }
+    public static int SCREEN_X, SCREEN_Y;
 
     RenderTexture g_VistaAtlas_A, g_VistaAtlas_B;
     bool target_atlasA;
@@ -29,7 +36,7 @@ public class BasicRenderpipeline : RenderPipeline
     TexelSpaceRenderHelperComparer m_RenderHelperComparer = new TexelSpaceRenderHelperComparer();
     int m_cs_CoverageToBuffer, g_ScreenVertexID, g_vertexIDVisiblity, m_cs_DebugCoverage, m_cs_AtlasPacking, m_cs_CopyDataToPreFrameBuffer;
     ComputeShader m_ResolveCS;
-    ComputeBuffer g_vertexIDVisiblity_B, g_ObjectToAtlasProperties, g_prev_ObjectToAtlasProperties;
+    ComputeBuffer g_vertexIDVisiblity_B, g_ObjectToAtlasProperties, g_prev_ObjectToAtlasProperties, g_ObjectMipMaps_screenTile;
     struct ObjectToAtlasProperties
     {
         public uint objectID;
@@ -38,7 +45,7 @@ public class BasicRenderpipeline : RenderPipeline
     }
 
 
-    int[] g_vertexIDVisiblity_B_init;
+    int[] g_vertexIDVisiblity_B_init, g_ObjectMipMaps_data;
     Vector4[] g_atlasUVMappings_data;
     ObjectToAtlasProperties[] g_ObjectToAtlasProperties_init;
     BasicRenderpipelineAsset m_asset;
@@ -57,6 +64,10 @@ public class BasicRenderpipeline : RenderPipeline
         g_vertexIDVisiblity = Shader.PropertyToID("g_VertexIDVisiblity");
 
         g_ScreenVertexID_RT = new RenderTargetIdentifier(g_ScreenVertexID);
+        
+        g_ObjectMipMaps_screenTile = new ComputeBuffer(
+            (SCREEN_MAX_X / COMPUTE_COVERAGE_TILE_SIZE) * (SCREEN_MAX_Y / COMPUTE_COVERAGE_TILE_SIZE), sizeof(uint) * MAXIMAL_OBJECTS_PER_VIEW);
+        g_ObjectMipMaps_data = Enumerable.Repeat(0, g_ObjectMipMaps_screenTile.count).ToArray();
 
         g_vertexIDVisiblity_B = new ComputeBuffer(65536, sizeof(int));
         g_vertexIDVisiblity_B_init = Enumerable.Repeat(0, g_vertexIDVisiblity_B.count).ToArray();
@@ -65,7 +76,6 @@ public class BasicRenderpipeline : RenderPipeline
         g_prev_ObjectToAtlasProperties = new ComputeBuffer(g_ObjectToAtlasProperties.count, g_ObjectToAtlasProperties.stride);
 
         g_ObjectToAtlasProperties_init = Enumerable.Repeat(new ObjectToAtlasProperties(), g_ObjectToAtlasProperties.count).ToArray();
-
         g_ObjectToAtlasProperties.SetData(g_ObjectToAtlasProperties_init);
         g_prev_ObjectToAtlasProperties.SetData(g_ObjectToAtlasProperties_init);
     }
@@ -111,6 +121,11 @@ public class BasicRenderpipeline : RenderPipeline
             m_context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
+    }
+
+    void ValidateScreenDependentBuffers()
+    {
+       
     }
 
     CullResults m_CullResults;
@@ -231,9 +246,14 @@ public class BasicRenderpipeline : RenderPipeline
         CommandBufferPool.Release(cmd);
     }
 
+
     void RenderTexelCoverage()
     {
-        // first render triangle coverage
+
+        int screen_x = CURRENT_CAMERA.pixelWidth;
+        int screen_y = CURRENT_CAMERA.pixelHeight;
+        // COVERAGE RENDER PASS
+        // renders the current view as: objectID, primitveID and mipmap level
         CommandBuffer cmd = CommandBufferPool.Get("RenderTexelCoverage");
         cmd.SetRenderTarget(g_ScreenVertexID);
         g_vertexIDVisiblity_B.SetData(g_vertexIDVisiblity_B_init);
@@ -243,19 +263,17 @@ public class BasicRenderpipeline : RenderPipeline
 
         cmd.Clear();
 
-        // then map coverage to a usable buffer    
+        // COVERAGE DISSOLVE PASS
+        // maps the previous rendered data into usable buffers  
+
+       
+        // first compute the fullscreen pass to a smaller buffer
         cmd.SetRandomWriteTarget(0, g_vertexIDVisiblity_B);
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CoverageToBuffer, "g_VertexIDVisiblity", g_vertexIDVisiblity_B);
-
         cmd.SetComputeTextureParam(m_ResolveCS, m_cs_CoverageToBuffer, g_ScreenVertexID, g_ScreenVertexID_RT);
-
-        cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CoverageToBuffer, "g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
+        cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CoverageToBuffer, "g_ObjectMipMaps", g_ObjectMipMaps_screenTile);
         cmd.SetRandomWriteTarget(1, g_ObjectToAtlasProperties);
-     
-        int screen_x = CURRENT_CAMERA.pixelWidth;
-        int screen_y = CURRENT_CAMERA.pixelHeight;
 
-        cmd.SetComputeIntParams(m_ResolveCS, "g_ScreenVertexID_dimension", new int[] { g_ScreenVertexID_dimension.x, g_ScreenVertexID_dimension.y, g_ScreenVertexID_dimension.x * g_ScreenVertexID_dimension.y });
         cmd.DispatchCompute(m_ResolveCS, m_cs_CoverageToBuffer, 1, 1, 1);
         cmd.ClearRandomWriteTargets();
         m_context.ExecuteCommandBuffer(cmd);
@@ -272,8 +290,8 @@ public class BasicRenderpipeline : RenderPipeline
             cmd.DispatchCompute(
                 m_ResolveCS,
                 m_cs_DebugCoverage,
-                1,
-                1,
+                screen_x / 8,
+                screen_y / 8,
                 1);
             cmd.ClearRandomWriteTargets();
             cmd.Blit(debugView, BuiltinRenderTextureType.CameraTarget);
