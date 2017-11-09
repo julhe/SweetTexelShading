@@ -90,13 +90,13 @@ Material:
     m_Floats:
     - _Alpha: 0
     - _AlphaTestRef: 0.5
-    - _BumpScale: 0.3
+    - _BumpScale: 1
     - _Cutoff: 0.5
     - _DebugLerp: 0
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _EmissionScaleUI: 1
-    - _GlossMapScale: 0
+    - _GlossMapScale: 1
     - _Glossiness: 1
     - _GlossyReflections: 1
     - _LEANbias: 0

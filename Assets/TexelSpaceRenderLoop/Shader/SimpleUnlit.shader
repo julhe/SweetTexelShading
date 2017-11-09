@@ -34,6 +34,7 @@ Shader "Unlit/SimpleUnlit"
 		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
 		StructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
 		StructuredBuffer<uint> _ObjectID_b, _prev_ObjectID_b; // wrap the objectID inside a buffer, since ints cant be set over a materialproperty block
+	
 		float g_AtlasResolutionScale;
 		sampler2D g_prev_VistaAtlas;
 		ENDCG
@@ -45,7 +46,7 @@ Shader "Unlit/SimpleUnlit"
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-
+			#pragma target 5.0
 			#include "UnityCG.cginc"
 
 				struct appdata
@@ -69,7 +70,7 @@ Shader "Unlit/SimpleUnlit"
 				o.uv = v.uv;
 				return o;
 			}
-
+			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
 			uint4 frag(v2f i, uint primID : SV_PrimitiveID) : SV_Target
 			{
 				//TODO: use worldsize instead
@@ -81,8 +82,14 @@ Shader "Unlit/SimpleUnlit"
 				// 2 ^ 13 = 8192 
 				d = (log2(d) * 0.5);
 				uint mipMapLevel = 13 - floor(d); //TODO: adjust 13 with SUB_TEXTURE_SIZE
+				uint objectID = _ObjectID_b[0];
+
+				// compute maximal lod level on-the-fly
+				// (doing it in compute shader is really painfull)
+				// (I <3 the fact that this is possible!)
+				InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
 				
-				return EncodeVisibilityBuffer(_ObjectID_b[0], primID, mipMapLevel);
+				return EncodeVisibilityBuffer(objectID, primID, mipMapLevel);
 			}
 			ENDCG
 		}

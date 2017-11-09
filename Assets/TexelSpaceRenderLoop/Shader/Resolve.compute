@@ -23,7 +23,6 @@ void DecodeVisibilityBuffer(uint encodedValue, out uint objectID, out uint primi
 	objectID = encodedValue & 0x7FF; //objectID
 	primitiveID = (encodedValue >> 11) & 0xFFFF; //primitiveID
 	mipmapLevel = (encodedValue >> 27) & 0x1F; //mipmapLevel
-
 }
 
 struct ObjectToAtlasProperties
@@ -33,33 +32,25 @@ struct ObjectToAtlasProperties
 	float4 atlas_ST; // scale and offset to transform uv coords into atlas space
 };
 
-struct ObjectMipMapLevels
-{
-	uint objectMipMaps[MAXIMAL_OBJECTS_PER_VIEW];
-};
-
 //#include "TexelShading.cginc" // includes are broken!
 // common variables
 uint g_totalObjectsInView;
 
-
 #pragma kernel ExtractCoverage
 Texture2D<int> g_ScreenVertexID;
 RWBuffer<float> g_VertexIDVisiblity;
-RWStructuredBuffer<ObjectMipMapLevels> g_ObjectMipMaps;
-
-groupshared uint gshared_objectMipmapLevel[MAXIMAL_OBJECTS_PER_VIEW];
+RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
+uint gshared_object_mipmap[MAXIMAL_OBJECTS_PER_VIEW];
+ 
 [numthreads(COMPUTE_COVERAGE_TILE_SIZE, COMPUTE_COVERAGE_TILE_SIZE,1)]
 void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
-	// initialize groupshared data
-	for(uint i = groupIndex; i < MAXIMAL_OBJECTS_PER_VIEW; i += COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE)
+	for(uint k = groupIndex; k < MAXIMAL_OBJECTS_PER_VIEW; k += COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE)
 	{
-		gshared_objectMipmapLevel[i] = 0;
+		g_ObjectToAtlasProperties[k].objectID = k;
 	}
+
 	AllMemoryBarrierWithGroupSync();
-
-
 	uint objectID, primitiveID, mipmapLevel;
 	DecodeVisibilityBuffer(
 		g_ScreenVertexID[id.xy],
@@ -68,24 +59,10 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 		/*out*/ mipmapLevel); 
 
 	g_VertexIDVisiblity[EncodeVisibilityBuffer(objectID, primitiveID, 0)] = 1; //unlock primitve
-	InterlockedMax(gshared_objectMipmapLevel[objectID], mipmapLevel);
-
-	AllMemoryBarrierWithGroupSync();
-	uint bufferIndex = id.x * (SCREEN_MAX_X / COMPUTE_COVERAGE_TILE_SIZE) + id.y;
-	// gather results
-	for(uint k = groupIndex; k < MAXIMAL_OBJECTS_PER_VIEW; k += COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE)
-	{
-		g_ObjectMipMaps[bufferIndex].objectMipMaps[k] = gshared_objectMipmapLevel[k];
-	}
-}
-RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
-
-[numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
-void ExtractCoverageFromTile(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
-{
-
 }
 
+
+StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesR;
 #pragma kernel DebugShowVertexID
 RWTexture2D<float4> g_DebugTexture;
 [numthreads(BLOCK_THREAD_SIZE, BLOCK_THREAD_SIZE,1)]
@@ -98,7 +75,8 @@ void DebugShowVertexID (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Gro
 		/*out*/ primitiveID,
 		/*out*/ mipmapLevel); 
 	float f = primitiveID;
-	g_DebugTexture[id.xy] = half4(sin(f / 2), sin(f / 512), sin(f / 16384), 0) * 0.5 + 0.5;
+	float mipmap_f = g_ObjectToAtlasPropertiesR[objectID].desiredAtlasSpace_axis / 13.0;
+	g_DebugTexture[id.xy] =  mipmap_f;// half4(sin(f / 2), sin(f / 512), sin(f / 16384), 0) * 0.5 + 0.5;
 	
 }
 
@@ -227,6 +205,7 @@ void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupInde
 	}
 }
 
+
 #pragma kernel CopyDataToPreFrameBuffer
 RWStructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
 [numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
@@ -235,5 +214,6 @@ void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : 
 	for (uint i = groupIndex; i < MAXIMAL_OBJECTS_PER_VIEW; i += SINGLE_ROW_THREAD_SIZE)
 	{
 		g_prev_ObjectToAtlasProperties[i] = g_ObjectToAtlasProperties[i];
+		//g_ObjectToAtlasProperties[i].desiredAtlasSpace_axis = 0;
 	}
 }
