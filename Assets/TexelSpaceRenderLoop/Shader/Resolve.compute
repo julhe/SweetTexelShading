@@ -1,6 +1,5 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
 #define MAXIMAL_OBJECTS_PER_VIEW 512
-#define SCREEN_MAX_X 2048
 #define COMPUTE_COVERAGE_TILE_SIZE 8
 #define ATLAS_TILE_SIZE 128
 #define ATLAS_OBJECT_SIZEEXPONENT_MIN 7 // 7^12 = ATLAS_TILE_SIZE, the minmal space an object can be in the atlas
@@ -45,12 +44,6 @@ uint gshared_object_mipmap[MAXIMAL_OBJECTS_PER_VIEW];
 [numthreads(COMPUTE_COVERAGE_TILE_SIZE, COMPUTE_COVERAGE_TILE_SIZE,1)]
 void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
-	for(uint k = groupIndex; k < MAXIMAL_OBJECTS_PER_VIEW; k += COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE)
-	{
-		g_ObjectToAtlasProperties[k].objectID = k;
-	}
-
-	AllMemoryBarrierWithGroupSync();
 	uint objectID, primitiveID, mipmapLevel;
 	DecodeVisibilityBuffer(
 		g_ScreenVertexID[id.xy],
@@ -74,9 +67,10 @@ void DebugShowVertexID (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Gro
 		/*out*/ objectID,
 		/*out*/ primitiveID,
 		/*out*/ mipmapLevel); 
-	float f = primitiveID;
+	//float f = g_ScreenVertexID[id.xy];
 	float mipmap_f = g_ObjectToAtlasPropertiesR[objectID].desiredAtlasSpace_axis / 13.0;
-	g_DebugTexture[id.xy] =  mipmap_f;// half4(sin(f / 2), sin(f / 512), sin(f / 16384), 0) * 0.5 + 0.5;
+	
+	g_DebugTexture[id.xy] = mipmap_f;// half4(sin(objectID), sin(primitiveID / 16), sin(mipmapLevel), 0) * 0.5 + 0.5;
 	
 }
 
@@ -214,6 +208,8 @@ void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : 
 	for (uint i = groupIndex; i < MAXIMAL_OBJECTS_PER_VIEW; i += SINGLE_ROW_THREAD_SIZE)
 	{
 		g_prev_ObjectToAtlasProperties[i] = g_ObjectToAtlasProperties[i];
+
+		g_ObjectToAtlasProperties[i].objectID = i; // reset object ID
 		g_ObjectToAtlasProperties[i].desiredAtlasSpace_axis = 0; //reset the mipmap level, otherwise the max() function for detecting the highest mipmap level would fail overtime
 	}
 }

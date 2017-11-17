@@ -105,7 +105,7 @@ public class BasicRenderpipeline : RenderPipeline
                 g_VistaAtlas_B.Release();
             }
 
-            g_VistaAtlas_A = new RenderTexture(targetAtlasSize, targetAtlasSize, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
+            g_VistaAtlas_A = new RenderTexture(targetAtlasSize, targetAtlasSize, 0, RenderTextureFormat.RGB111110Float, RenderTextureReadWrite.Linear);
             
             g_VistaAtlas_A.Create();
             g_VistaAtlas_B = new RenderTexture(g_VistaAtlas_A);
@@ -194,7 +194,7 @@ public class BasicRenderpipeline : RenderPipeline
         
         }
         context.Submit();
-        m_asset.memoryConsumption += g_VistaAtlas_A.width * g_VistaAtlas_A.height * (g_VistaAtlas_A.format == RenderTextureFormat.DefaultHDR ? 8 : 4);
+        m_asset.memoryConsumption += g_VistaAtlas_A.width * g_VistaAtlas_A.height * (g_VistaAtlas_A.format == RenderTextureFormat.DefaultHDR ? 8 : 4) * 2;
         m_asset.memoryConsumption /= 1024;
         m_asset.memoryConsumption /= 1024;
     }

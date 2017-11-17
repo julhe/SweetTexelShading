@@ -14,10 +14,10 @@ MonoBehaviour:
   resolveShader: {fileID: 7200000, guid: c95f3716fba8afd4cbff02f3e8708ae5, type: 3}
   maximalAtlasSizeExponent: 13
   useAtlasOverride: 0
-  atlasResolutionScale: 3800
+  atlasResolutionScale: 8192
   visibilityPassDownscale: 1
-  atlasRefreshFps: 1000
+  atlasRefreshFps: 1
   clearAtlasOnRefresh: 0
   debugAtlasOverride: {fileID: 2800000, guid: 7206d3c73c96ff846b8f8b13baef7be1, type: 3}
   debugPass: 0
-  memoryConsumption: 256
+  memoryConsumption: 512

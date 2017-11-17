@@ -75,18 +75,17 @@ Shader "Unlit/SimpleUnlit"
 			{
 				//TODO: use worldsize instead
 				const float SUB_TEXTURE_SIZE = 8192;
-				const float scale = g_AtlasResolutionScale;
-				float3 dx = ddx(i.worldPos * scale);
-				float3 dy = ddy(i.worldPos * scale);
+				float2 dx = ddx(i.uv * g_AtlasResolutionScale);
+				float2 dy = ddy(i.uv * g_AtlasResolutionScale);
+
 				float d = max(max(dot(dx, dx), dot(dy, dy)), 1);
 				// 2 ^ 13 = 8192 
-				d = (log2(d) * 0.5);
-				uint mipMapLevel = 13 - floor(d); //TODO: adjust 13 with SUB_TEXTURE_SIZE
+				d = min(log2(d) * 0.5, 13);
+				uint mipMapLevel =floor(13 -  d); //TODO: adjust 13 with SUB_TEXTURE_SIZE
 				uint objectID = _ObjectID_b[0];
 
-				// compute maximal lod level on-the-fly
-				// (doing it in compute shader is really painfull)
-				// (I <3 the fact that this is possible!)
+				// compute maximal lod level on-the-fly, which is slow and not 100% correct, but works so far
+				// note: it is still possible that a part with a high mipmap level is occluded later!
 				InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
 				
 				return EncodeVisibilityBuffer(objectID, primID, mipMapLevel);
@@ -295,6 +294,7 @@ Shader "Unlit/SimpleUnlit"
 					float2 hPixel = float2(1.0 / _ScreenParams.x, 1.0 / _ScreenParams.y);
 					float pl = 1.4142135637309 / ( max(_ScreenParams.x, _ScreenParams.y));
 
+
 					//calculate AABB of this triangle
 					AABB.xy = p0.pos.xy;
 					AABB.zw = p0.pos.xy;
@@ -324,7 +324,7 @@ Shader "Unlit/SimpleUnlit"
 
 					//dilate the triangle
 					// julian: I can't figure out why the dilate-offset sometimes produces insane distorted triangels
-					// so I normalize the offset, which works pretty well sofar
+					// so I normalize the offset, which works pretty well so far
 					p0.pos.xy += pl*normalize((e2.xy / dot(e2.xy, n0.xy)) + (e0.xy / dot(e0.xy, n2.xy)));
 					p1.pos.xy += pl*normalize((e0.xy / dot(e0.xy, n1.xy)) + (e1.xy / dot(e1.xy, n0.xy)));
 					p2.pos.xy += pl*normalize((e1.xy / dot(e1.xy, n2.xy)) + (e2.xy / dot(e2.xy, n1.xy)));
