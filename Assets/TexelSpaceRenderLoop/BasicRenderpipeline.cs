@@ -213,7 +213,11 @@ public class BasicRenderpipeline : RenderPipeline
         cmd.ClearRenderTarget(true, true, Color.clear);
 
         cmd.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
-        //cmd.ClearRenderTarget(true, true, Color.green);
+        if(m_asset.clearAtlasOnRefresh)
+        {
+            cmd.ClearRenderTarget(true, true, Color.black);
+        }
+          
         cmd.SetGlobalTexture("g_VistaAtlas", target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
         cmd.SetGlobalTexture("g_prev_VistaAtlas", target_atlasA ? g_VistaAtlas_B : g_VistaAtlas_A);
 

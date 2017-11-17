@@ -214,6 +214,6 @@ void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : 
 	for (uint i = groupIndex; i < MAXIMAL_OBJECTS_PER_VIEW; i += SINGLE_ROW_THREAD_SIZE)
 	{
 		g_prev_ObjectToAtlasProperties[i] = g_ObjectToAtlasProperties[i];
-		//g_ObjectToAtlasProperties[i].desiredAtlasSpace_axis = 0;
+		g_ObjectToAtlasProperties[i].desiredAtlasSpace_axis = 0; //reset the mipmap level, otherwise the max() function for detecting the highest mipmap level would fail overtime
 	}
 }

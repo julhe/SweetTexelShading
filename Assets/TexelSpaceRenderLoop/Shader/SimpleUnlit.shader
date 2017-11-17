@@ -6,7 +6,7 @@ Shader "Unlit/SimpleUnlit"
 	{
 		_MainTex ("Texture", 2D) = "white" {}
 		_Smoothness ("Smoothness", Range(0,1)) = 0.5
-		_Metallic ("Metallic", Range(0,1)) = 0.5
+		_Specular ("_Specular", Color) = (0.5,0.5,0.5)
 		_BumpMap("NormalMap", 2D) = "bump" {}
 		_SpecGlossMap("Metallic", 2D) = "white" {}
 		_OcclusionMap("Occlusion", 2D) = "white" {}
@@ -98,7 +98,6 @@ Shader "Unlit/SimpleUnlit"
 			{
 
 			Tags{ "LightMode" = "Vista Pass" }
-			Cull Off
 			CGPROGRAM
 				
 			#pragma vertex vert
@@ -139,6 +138,7 @@ Shader "Unlit/SimpleUnlit"
 			float g_atlasMorph;
 			half4 frag(v2f i) : SV_Target
 			{
+			//	return  float4( i.pos.xy / i.pos.w, 0, 1);
 				float3 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev).rgb;
 				float3 atlasB = tex2D(g_VistaAtlas, i.uv).rgb;
 				return float4(lerp(atlasA, atlasB, g_atlasMorph), 1);
@@ -183,6 +183,8 @@ Shader "Unlit/SimpleUnlit"
 #endif
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
+				float4 triangleAABB : COLOR0;
+				float2 fragPos :COLOR1;
 			};
 #endif
 			// with lightmaps:
@@ -194,15 +196,18 @@ Shader "Unlit/SimpleUnlit"
 				float4 tSpace1 : TEXCOORD2;
 				float4 tSpace2 : TEXCOORD3;
 				float4 lmap : TEXCOORD4;
+				
 				UNITY_SHADOW_COORDS(5)
 					UNITY_FOG_COORDS(6)
 					UNITY_VERTEX_INPUT_INSTANCE_ID
 					UNITY_VERTEX_OUTPUT_STEREO
+					float4 triangleAABB : COLOR0;
+				float2 fragPos :COLOR1;
 			};
 #endif
 			float4 _MainTex_ST;
 
-
+			float3 _Specular;
 			sampler2D _MainTex, _BumpMap;
 
 			
@@ -220,7 +225,8 @@ Shader "Unlit/SimpleUnlit"
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				atlasCoord.y = 1 - atlasCoord.y;
 				o.pos = float4(atlasCoord * 2 - 1, 0, 1);
-
+				o.triangleAABB = 0;
+				o.fragPos = o.pos;
 				// 
 				o.pack0.xy = TRANSFORM_TEX(v.texcoord, _MainTex);
 				float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
@@ -283,21 +289,74 @@ Shader "Unlit/SimpleUnlit"
 					v2f_surf p0 = p[0];
 					v2f_surf p1 = p[1];
 					v2f_surf p2 = p[2];
+					// julian: source: https://github.com/otaku690/SparseVoxelOctree/blob/master/WIN/SVO/shader/voxelize.geom.glsl
+					//Next we enlarge the triangle to enable conservative rasterization
+					float4 AABB;
+					float2 hPixel = float2(1.0 / _ScreenParams.x, 1.0 / _ScreenParams.y);
+					float pl = 1.4142135637309 / ( max(_ScreenParams.x, _ScreenParams.y));
+
+					//calculate AABB of this triangle
+					AABB.xy = p0.pos.xy;
+					AABB.zw = p0.pos.xy;
+
+					AABB.xy = min(p1.pos.xy, AABB.xy);
+					AABB.zw = max(p1.pos.xy, AABB.zw);
+
+					AABB.xy = min(p2.pos.xy, AABB.xy);
+					AABB.zw = max(p2.pos.xy, AABB.zw);
+
+					//Enlarge half-pixel
+					AABB.xy -= hPixel;
+					AABB.zw += hPixel;
+
+					// set AABB
+					p0.triangleAABB = AABB;
+					p1.triangleAABB = AABB;
+					p2.triangleAABB = AABB;
+
+					//find 3 triangle edge plane
+					float3 e0 = float3(p1.pos.xy - p0.pos.xy, 0);
+					float3 e1 = float3(p2.pos.xy - p1.pos.xy, 0);
+					float3 e2 = float3(p0.pos.xy - p2.pos.xy, 0);
+					float3 n0 = cross(e0, float3(0, 0, 1));
+					float3 n1 = cross(e1, float3(0, 0, 1));
+					float3 n2 = cross(e2, float3(0, 0, 1));
+
+					//dilate the triangle
+					// julian: I can't figure out why the dilate-offset sometimes produces insane distorted triangels
+					// so I normalize the offset, which works pretty well sofar
+					p0.pos.xy += pl*normalize((e2.xy / dot(e2.xy, n0.xy)) + (e0.xy / dot(e0.xy, n2.xy)));
+					p1.pos.xy += pl*normalize((e0.xy / dot(e0.xy, n1.xy)) + (e1.xy / dot(e1.xy, n0.xy)));
+					p2.pos.xy += pl*normalize((e1.xy / dot(e1.xy, n2.xy)) + (e2.xy / dot(e2.xy, n1.xy)));
+
+					// obsolete 
+					p0.fragPos = e2.xy / dot(e2.xy, n0.xy);
+					p1.fragPos = e0.xy / dot(e0.xy, n1.xy);
+					p2.fragPos = e1.xy / dot(e1.xy, n2.xy);
 
 					triStream.Append(p0);
 					triStream.Append(p1);
 					triStream.Append(p2);
 				}
 
-				//triStream.RestartStrip();
+				triStream.RestartStrip();
 			}
 
 			float3 g_LightDir;
-			float _Smoothness, _Metallic;
+			float _Smoothness;
 			sampler2D _SpecGlossMap, _OcclusionMap;
 			half4 frag (v2f_surf i) : SV_Target
 			{
+				// julian: obsolete boundary cliping here
+				//float2 screenspacePos = i.fragPos;// (i.pos.xy / i.pos.w) / _ScreenParams;
 
+				//return float4(abs(screenspacePos), 0, 1);
+				//return float4(, 0, 1);
+				
+				//	if (screenspacePos.x < i.triangleAABB.x || screenspacePos.y < i.triangleAABB.y || screenspacePos.x > i.triangleAABB.z || screenspacePos.y > i.triangleAABB.w)
+				//		return float4(0,0,1,1);
+				//return 1;
+				//--------------------------
 				// surface
 				SurfaceOutputStandardSpecular s = (SurfaceOutputStandardSpecular)0;
 				s.Albedo = tex2D(_MainTex, i.pack0);
@@ -310,8 +369,8 @@ Shader "Unlit/SimpleUnlit"
 				worldNormal.z = dot(i.tSpace2, tnormal);
 				s.Normal = worldNormal;
 				float4 specGloss = tex2D(_SpecGlossMap, i.pack0);
-				s.Smoothness = specGloss.a;
-				s.Specular = specGloss.rgb;
+				s.Smoothness = specGloss.a * _Smoothness;
+				s.Specular = specGloss.rgb * _Specular;
 				s.Occlusion = tex2D(_OcclusionMap, i.pack0);
 
 				//

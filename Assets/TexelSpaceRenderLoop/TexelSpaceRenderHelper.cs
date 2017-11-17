@@ -83,10 +83,10 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     }
     private void OnDrawGizmosSelected()
     {
-        Bounds bounds = GetComponent<MeshRenderer>().bounds;
-        Vector4 sphere = getBoundingSphere();
-        Gizmos.DrawWireSphere(sphere, sphere.w);
-        Gizmos.DrawWireCube(bounds.center, bounds.size);
+       // Bounds bounds = GetComponent<MeshRenderer>().bounds;
+        //Vector4 sphere = getBoundingSphere();
+        //Gizmos.DrawWireSphere(sphere, sphere.w);
+        //Gizmos.DrawWireCube(bounds.center, bounds.size);
     }
 
     // source: http://www.iquilezles.org/www/articles/sphereproj/sphereproj.htm
