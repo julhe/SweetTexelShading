@@ -19,6 +19,8 @@ public class BasicRenderpipeline : RenderPipeline
     const int MAXIMAL_OBJECTS_PER_VIEW = 512;
     const int SCREEN_MAX_X = 2048, SCREEN_MAX_Y = 2048;
     const int COMPUTE_COVERAGE_TILE_SIZE = 8;
+    const int MAX_PRIMITIVES_PER_OBJECT = 8192;
+    const int PRIMITIVE_CLUSTER_SIZE = 8;
     static readonly ShaderPassName m_TexelSpacePass = new ShaderPassName("Texel Space Pass");
     static readonly ShaderPassName m_VistaPass = new ShaderPassName("Vista Pass");
     static readonly ShaderPassName m_CoveragePass = new ShaderPassName("Coverage Pass");
@@ -68,7 +70,8 @@ public class BasicRenderpipeline : RenderPipeline
         g_ObjectMipMaps = new ComputeBuffer(MAXIMAL_OBJECTS_PER_VIEW, sizeof(uint));
         g_ObjectMipMaps_data = Enumerable.Repeat(0, g_ObjectMipMaps.count).ToArray();
 
-        g_vertexIDVisiblity_B = new ComputeBuffer(65536, sizeof(int));
+        g_vertexIDVisiblity_B = new ComputeBuffer((128 * MAX_PRIMITIVES_PER_OBJECT), sizeof(int));
+        Debug.Log(g_vertexIDVisiblity_B.count);
         g_vertexIDVisiblity_B_init = Enumerable.Repeat(0, g_vertexIDVisiblity_B.count).ToArray();
 
         g_ObjectToAtlasProperties = new ComputeBuffer(MAXIMAL_OBJECTS_PER_VIEW, sizeof(uint) + sizeof(uint) + sizeof(float) * 4);
@@ -149,7 +152,8 @@ public class BasicRenderpipeline : RenderPipeline
             timeSinceLastRender = 0f;
         }
 
-        
+
+        g_vertexIDVisiblity_B.SetData(g_vertexIDVisiblity_B_init);
         foreach (Camera camera in cameras)
         {
             CURRENT_CAMERA = camera;
@@ -295,6 +299,8 @@ public class BasicRenderpipeline : RenderPipeline
             cmd.SetRandomWriteTarget(0, debugView);
             cmd.SetComputeTextureParam(m_ResolveCS, m_cs_DebugCoverage, g_ScreenVertexID, g_ScreenVertexID_RT);
             cmd.SetComputeTextureParam(m_ResolveCS, m_cs_DebugCoverage, "g_DebugTexture", debugView);
+            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_DebugCoverage, "g_VertexIDVisiblity", g_vertexIDVisiblity_B);
+
             cmd.SetComputeBufferParam(m_ResolveCS, m_cs_DebugCoverage, "g_ObjectToAtlasPropertiesR", g_ObjectToAtlasProperties);
             cmd.DispatchCompute(
                 m_ResolveCS,
