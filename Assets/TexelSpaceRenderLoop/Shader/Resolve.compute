@@ -1,5 +1,7 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
 #define MAXIMAL_OBJECTS_PER_VIEW 512
+#define MAX_PRIMITIVES_PER_OBJECT 8192
+#define PRIMITIVE_CLUSTER_SIZE 8
 #define COMPUTE_COVERAGE_TILE_SIZE 8
 #define ATLAS_TILE_SIZE 128
 #define ATLAS_OBJECT_SIZEEXPONENT_MIN 7 // 7^12 = ATLAS_TILE_SIZE, the minmal space an object can be in the atlas
@@ -24,6 +26,15 @@ void DecodeVisibilityBuffer(uint encodedValue, out uint objectID, out uint primi
 	mipmapLevel = (encodedValue >> 27) & 0x1F; //mipmapLevel
 }
 
+void GetVisiblityIDIndicies(uint objectID, uint primitiveID, out uint baseIndex, out uint subIndex)
+{
+	uint index = objectID * MAX_PRIMITIVES_PER_OBJECT + floor(primitiveID / (float)PRIMITIVE_CLUSTER_SIZE );
+	baseIndex = index / 32;
+	subIndex = index % 32;
+
+	baseIndex = index;
+}
+
 struct ObjectToAtlasProperties
 {
 	uint objectID; // the original object ID, used to trace back the object after sorting
@@ -37,7 +48,7 @@ uint g_totalObjectsInView;
 
 #pragma kernel ExtractCoverage
 Texture2D<int> g_ScreenVertexID;
-RWBuffer<float> g_VertexIDVisiblity;
+RWBuffer<uint> g_VertexIDVisiblity;
 RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
 uint gshared_object_mipmap[MAXIMAL_OBJECTS_PER_VIEW];
  
@@ -51,7 +62,11 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 		/*out*/ primitiveID,
 		/*out*/ mipmapLevel); 
 
-	g_VertexIDVisiblity[EncodeVisibilityBuffer(objectID, primitiveID, 0)] = 1; //unlock primitve
+	uint baseIndex, subIndex;
+	GetVisiblityIDIndicies(objectID, primitiveID, /*out*/ baseIndex, /*out*/ subIndex);
+	g_VertexIDVisiblity[baseIndex] = 1;
+
+	//g_VertexIDVisiblity[EncodeVisibilityBuffer(objectID, primitiveID, 0)] = 1; //unlock primitve
 }
 
 
@@ -67,19 +82,16 @@ void DebugShowVertexID (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Gro
 		/*out*/ objectID,
 		/*out*/ primitiveID,
 		/*out*/ mipmapLevel); 
-	//float f = g_ScreenVertexID[id.xy];
-	float mipmap_f = g_ObjectToAtlasPropertiesR[objectID].desiredAtlasSpace_axis / 13.0;
-	
-	g_DebugTexture[id.xy] = mipmap_f;// half4(sin(objectID), sin(primitiveID / 16), sin(mipmapLevel), 0) * 0.5 + 0.5;
-	
-}
 
-//TODO: untested
-uint GetPrimitiveVisiblity(uint primitiveID, uint vis[MAXIMAL_OBJECTS_PER_VIEW])
-{
-	uint bitIndex = primitiveID % 32;
-	uint arrayIndex = floor(primitiveID / 32);
-	return (vis[arrayIndex] >> bitIndex) & 0x1;
+	//float mipmap_f = g_ObjectToAtlasPropertiesR[objectID].desiredAtlasSpace_axis / 13.0;
+
+	uint baseIndex, subIndex;
+	GetVisiblityIDIndicies(objectID, primitiveID, /*out*/ baseIndex, /*out*/ subIndex);
+
+	float visiblity = (float) g_VertexIDVisiblity[baseIndex];
+
+	g_DebugTexture[id.xy] = visiblity;// half4(sin(floor(primitiveID / 16.0)), sin(0), sin(0), 0) * 0.5 + 0.5;
+	
 }
 
 //--------unitility--------

@@ -10,6 +10,8 @@ Shader "Unlit/SimpleUnlit"
 		_BumpMap("NormalMap", 2D) = "bump" {}
 		_SpecGlossMap("Metallic", 2D) = "white" {}
 		_OcclusionMap("Occlusion", 2D) = "white" {}
+		_EmissionMap("Emission", 2D) = "black" {}
+		_EmissionColor("_EmissionColor", Color) = (0,0,0,0)
 	}
 	SubShader
 	{
@@ -264,18 +266,31 @@ Shader "Unlit/SimpleUnlit"
 
 				return o;
 			}
+#define MAX_PRIMITIVES_PER_OBJECT 8192
+#define PRIMITIVE_CLUSTER_SIZE 8
+			void GetVisiblityIDIndicies(uint objectID, uint primitiveID, out uint baseIndex, out uint subIndex)
+			{
+				uint index = objectID * MAX_PRIMITIVES_PER_OBJECT + floor(primitiveID / PRIMITIVE_CLUSTER_SIZE);
+				baseIndex = index / 32;
+				subIndex = index % 32;
 
+				baseIndex = index;
+			}
 
 #define FULLSCREEN_TRIANGLE_CULLING
 			float3 g_CameraPositionWS;
-			Buffer<float> g_VertexIDVisiblity;
-			
+			Buffer<uint> g_VertexIDVisiblity;
+
+
 			[maxvertexcount(3)]
 			void geom(triangle v2f_surf p[3], inout TriangleStream<v2f_surf> triStream, in uint primID : SV_PrimitiveID)
 			{
 #ifdef FULLSCREEN_TRIANGLE_CULLING
 				
-				float visiblity = 1;// g_VertexIDVisiblity[EncodeVisibilityBuffer(_ObjectID_b[0], primID, 0)];
+				uint baseIndex, subIndex;
+				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
+
+				float visiblity = g_VertexIDVisiblity[baseIndex];// &(subIndex >> 1));
 #else
 				float3 averagePos = (p[0].worldPos + p[1].worldPos + p[2].worldPos) / 3.0;
 				float3 viewDir = normalize((averagePos) -g_CameraPositionWS);
@@ -292,7 +307,7 @@ Shader "Unlit/SimpleUnlit"
 					//Next we enlarge the triangle to enable conservative rasterization
 					float4 AABB;
 					float2 hPixel = float2(1.0 / _ScreenParams.x, 1.0 / _ScreenParams.y);
-					float pl = 1.4142135637309 / ( max(_ScreenParams.x, _ScreenParams.y));
+					float pl = 1.4142135637309 / ( min(_ScreenParams.x, _ScreenParams.y));
 
 
 					//calculate AABB of this triangle
@@ -342,9 +357,9 @@ Shader "Unlit/SimpleUnlit"
 				triStream.RestartStrip();
 			}
 
-			float3 g_LightDir;
+			float3 g_LightDir, _EmissionColor;
 			float _Smoothness;
-			sampler2D _SpecGlossMap, _OcclusionMap;
+			sampler2D _SpecGlossMap, _OcclusionMap, _EmissionMap;
 			half4 frag (v2f_surf i) : SV_Target
 			{
 				// julian: obsolete boundary cliping here
@@ -372,7 +387,7 @@ Shader "Unlit/SimpleUnlit"
 				s.Smoothness = specGloss.a * _Smoothness;
 				s.Specular = specGloss.rgb * _Specular;
 				s.Occlusion = tex2D(_OcclusionMap, i.pack0);
-
+				s.Emission = tex2D(_EmissionMap, i.pack0) * _EmissionColor;
 				//
 
 				float3 worldPos = float3(i.tSpace0.w, i.tSpace1.w, i.tSpace2.w);
@@ -428,6 +443,7 @@ Shader "Unlit/SimpleUnlit"
 					worldViewDir,
 					gi);
 
+				outColor += s.Emission;
 				return float4(outColor, 1);
 			}
 			ENDCG
