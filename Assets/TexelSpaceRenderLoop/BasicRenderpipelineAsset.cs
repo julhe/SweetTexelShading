@@ -9,6 +9,7 @@ public class BasicRenderpipelineAsset : RenderPipelineAsset
     private static readonly string m_AssetName = "BasicRenderpipeline.asset";
 
     public ComputeShader resolveShader;
+    public Shader resolveBlitShader;
     [Range(3, 13)]
     public int maximalAtlasSizeExponent;
     public int maximalAtlasSizePixel

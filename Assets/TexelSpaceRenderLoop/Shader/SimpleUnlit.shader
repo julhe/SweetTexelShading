@@ -11,26 +11,15 @@ Shader "Unlit/SimpleUnlit"
 		_SpecGlossMap("Metallic", 2D) = "white" {}
 		_OcclusionMap("Occlusion", 2D) = "white" {}
 		_EmissionMap("Emission", 2D) = "black" {}
-		_EmissionColor("_EmissionColor", Color) = (0,0,0,0)
+		[HDR] _EmissionColor("_EmissionColor", Color) = (0,0,0,0)
 	}
 	SubShader
 	{
 		Tags { "RenderType"="Opaque" "RenderPipeline" = "BasicRenderpipeline"}
 		LOD 100
 		CGINCLUDE
-		// keep in sync with compute shader, since includes are broken!!!
-		uint EncodeVisibilityBuffer(uint objectID, uint primitiveID, uint mipmapLevel)
-		{
-			return objectID | primitiveID << 11 | mipmapLevel << 27;
-		}
 
-		struct ObjectToAtlasProperties
-		{
-			uint objectID;
-			uint desiredAtlasSpace_axis; // the length of the texture inside the atlas
-			float4 atlas_ST; // scale and offset to transform uv coords into atlas space
-		};
-
+		#include "TexelShading.cginc" 
 
 		#pragma enable_d3d11_debug_symbols
 		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
@@ -86,7 +75,7 @@ Shader "Unlit/SimpleUnlit"
 				uint mipMapLevel =floor(13 -  d); //TODO: adjust 13 with SUB_TEXTURE_SIZE
 				uint objectID = _ObjectID_b[0];
 
-				// compute maximal lod level on-the-fly, which is slow and not 100% correct, but works so far
+				// compute maximal lod level on-the-fly, which is very slow, but works so far.
 				// note: it is still possible that a part with a high mipmap level is occluded later!
 				InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
 				
@@ -266,16 +255,7 @@ Shader "Unlit/SimpleUnlit"
 
 				return o;
 			}
-#define MAX_PRIMITIVES_PER_OBJECT 8192
-#define PRIMITIVE_CLUSTER_SIZE 8
-			void GetVisiblityIDIndicies(uint objectID, uint primitiveID, out uint baseIndex, out uint subIndex)
-			{
-				uint index = objectID * MAX_PRIMITIVES_PER_OBJECT + floor(primitiveID / PRIMITIVE_CLUSTER_SIZE);
-				baseIndex = index / 32;
-				subIndex = index % 32;
 
-				baseIndex = index;
-			}
 
 #define FULLSCREEN_TRIANGLE_CULLING
 			float3 g_CameraPositionWS;

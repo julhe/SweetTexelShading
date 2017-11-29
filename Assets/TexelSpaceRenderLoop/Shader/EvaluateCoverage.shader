@@ -18,6 +18,8 @@
 			#pragma enable_d3d11_debug_symbols
 			#include "UnityCG.cginc"
 
+
+
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -62,8 +64,20 @@
 				mipmapLevel = (encodedValue >> 27) & 0x1F; //mipmapLevel
 			}
 
-			RWBuffer<float> g_VertexIDVisiblity;
+			#define MAX_PRIMITIVES_PER_OBJECT 8192
+			#define PRIMITIVE_CLUSTER_SIZE 8
+			void GetVisiblityIDIndicies(uint objectID, uint primitiveID, out uint baseIndex, out uint subIndex)
+			{
+				uint index = objectID * MAX_PRIMITIVES_PER_OBJECT + floor(primitiveID / (float)PRIMITIVE_CLUSTER_SIZE);
+				baseIndex = index / 32;
+				subIndex = index % 32;
+
+				baseIndex = index;
+			}
+
 			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
+			RWBuffer<int> g_VertexIDVisiblity;
+		
 
 			float4 globalTest;
 			fixed4 frag (v2f i) : SV_Target
@@ -77,16 +91,20 @@
 					/*out*/ primitiveID,
 					/*out*/ mipmapLevel);
 
+				// "unlock" primitive for texel shading
+				uint baseIndex, subIndex;
+				GetVisiblityIDIndicies(objectID, primitiveID, /*out*/ baseIndex, /*out*/ subIndex);
+				g_VertexIDVisiblity[baseIndex] = 1;
+
 				// compute maximal lod level on-the-fly
 				// (doing it in compute shader is really painfull)
 				// (I <3 the fact that this is possible!)
-				InterlockedMax(g_ObjectToAtlasProperties[objectID].desiredAtlasSpace_axis, mipmapLevel);
+				//InterlockedMax(g_ObjectToAtlasProperties[objectID].desiredAtlasSpace_axis, mipmapLevel);
 
-				g_VertexIDVisiblity[EncodeVisibilityBuffer(objectID, primitiveID, 0)] = 1; //unlock primitve
-				float f = g_ObjectToAtlasProperties[objectID].desiredAtlasSpace_axis;
+				float f = g_ObjectToAtlasProperties[objectID].objectID;// g_ObjectToAtlasProperties[objectID].desiredAtlasSpace_axis;
 
 				half4 debugColor = half4(sin(f / 2), sin(f / 512), sin(f / 16384), 0) * 0.5 + 0.5;
-				return f;
+				return debugColor;
 			}
 			ENDCG
 		}
