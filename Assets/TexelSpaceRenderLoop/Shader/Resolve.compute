@@ -5,56 +5,80 @@
 // common variables
 uint g_totalObjectsInView;
 
+// reads the VisibilityBuffer and extracts the visible triangles
+// -----------------------------------------------------------------------------
 #pragma kernel ExtractCoverage
-Texture2D<int> g_ScreenVertexID;
-RWBuffer<uint> g_VertexIDVisiblity;
+Texture2D<int> g_VisibilityBuffer;
+RWBuffer<uint> g_PrimitiveVisibility;
 RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
-uint gshared_object_mipmap[MAXIMAL_OBJECTS_PER_VIEW];
- 
+
 [numthreads(COMPUTE_COVERAGE_TILE_SIZE, COMPUTE_COVERAGE_TILE_SIZE,1)]
 void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	uint objectID, primitiveID, mipmapLevel;
 	DecodeVisibilityBuffer(
-		g_ScreenVertexID[id.xy],
+		g_VisibilityBuffer[id.xy],
 		/*out*/ objectID,
 		/*out*/ primitiveID,
 		/*out*/ mipmapLevel); 
 
 	uint baseIndex, subIndex;
 	GetVisiblityIDIndicies(objectID, primitiveID, /*out*/ baseIndex, /*out*/ subIndex);
-	g_VertexIDVisiblity[baseIndex] = 1;
+	g_PrimitiveVisibility[baseIndex] = 1;
 
-	//g_VertexIDVisiblity[EncodeVisibilityBuffer(objectID, primitiveID, 0)] = 1; //unlock primitve
+	//g_PrimitiveVisibility[EncodeVisibilityBuffer(objectID, primitiveID, 0)] = 1; //unlock primitve
 }
 
-
-StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesR;
+// provides debug information
+// -----------------------------------------------------------------------------
 #pragma kernel DebugShowVertexID
 RWTexture2D<float4> g_DebugTexture;
+StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesR;
+int g_DebugPassID;
+
 [numthreads(BLOCK_THREAD_SIZE, BLOCK_THREAD_SIZE,1)]
 void DebugShowVertexID (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	uint objectID, primitiveID, mipmapLevel;
 	DecodeVisibilityBuffer(
-		g_ScreenVertexID[id.xy],
+		g_VisibilityBuffer[id.xy],
 		/*out*/ objectID,
 		/*out*/ primitiveID,
 		/*out*/ mipmapLevel); 
 
-	//float mipmap_f = g_ObjectToAtlasPropertiesR[objectID].desiredAtlasSpace_axis / 13.0;
 
 	uint baseIndex, subIndex;
 	GetVisiblityIDIndicies(objectID, primitiveID, /*out*/ baseIndex, /*out*/ subIndex);
 
-	float visiblity = (float) g_VertexIDVisiblity[baseIndex];
+	half4 output = 0;
+	float f;
+	switch (g_DebugPassID)
+	{
+		case 1:
+			f = objectID;// floor(primitiveID / PRIMITIVE_CLUSTER_SIZE);
+			output = half4(sin(f), sin(f / 2), sin(f / 4), 0) * 0.5 + 0.5;
+			break;
+		case 2:
+			f = floor(primitiveID / PRIMITIVE_CLUSTER_SIZE);
+			output = half4(sin(f / 5.0), sin(f / 50.0), sin(f / 500.0), 0) * 0.5 + 0.5;
+			break;
+		case 3:
+			float mipmap_f = g_ObjectToAtlasPropertiesR[objectID].desiredAtlasSpace_axis / 13.0;
+			output = mipmap_f;
+			break;
+		case 4:
+			output = mipmapLevel / 13.0;
+			break;
+	}
 
-	g_DebugTexture[id.xy] = visiblity;// half4(sin(floor(primitiveID / 16.0)), sin(0), sin(0), 0) * 0.5 + 0.5;
+	g_DebugTexture[id.xy] = output;
 	
 }
 
+// packs texel atlas
+// -----------------------------------------------------------------------------
 
-// I use morton-code / z-shape for atlas packing
+// julian: I use the morton-code / z-shape for atlas packing
 // this makes the packing very much straight forward and the complexity for insertion is always O(1).
 // But this only works, as long as the textures sizes are power-of-two (256, 512, 1024,...) and the largest textures are getting inserted first
 uint2 GetTilePosition(uint index)
@@ -75,7 +99,6 @@ float4 GetUVToAtlasScaleOffset(float4 atlasPixelSpace)
 {
     return float4(atlasPixelSpace.zw - atlasPixelSpace.xy, atlasPixelSpace.xy);
 }
-
 
 #pragma kernel AtlasPacking
 uint atlas_sliceCount;
@@ -104,7 +127,7 @@ void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupInde
 	}
 
 	AllMemoryBarrierWithGroupSync();
-	//TODO: muttihreading can't be used here, since the order of exectuion is crucial...
+	//TODO: muttihreading can't be used here ad-hoc, since the order of exectuion is crucial...
 	for(uint i = 0; i < g_totalObjectsInView; i++)
 	{
 		// TODO: can't use clamp() somehow...
@@ -142,6 +165,9 @@ void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupInde
 	}
 }
 
+// copys data to prev buffer, and initalizes 'g_ObjectToAtlasProperties' 
+// TODO: can be done with a simple reference swap?!
+// -----------------------------------------------------------------------------
 
 #pragma kernel CopyDataToPreFrameBuffer
 RWStructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;

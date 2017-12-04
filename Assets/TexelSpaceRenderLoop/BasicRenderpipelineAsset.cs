@@ -16,13 +16,12 @@ public class BasicRenderpipelineAsset : RenderPipelineAsset
     {
         get { return Mathf.NextPowerOfTwo(Mathf.RoundToInt(Mathf.Pow(2f, maximalAtlasSizeExponent))); }
     }
-    public bool useAtlasOverride = false;
+
     public float atlasResolutionScale = 1024f;
     public float visibilityPassDownscale = 1f;
     public float atlasRefreshFps = 30;
     public bool clearAtlasOnRefresh = false;
-    public Texture2D debugAtlasOverride;
-    public TexelSpacePass debugPass = TexelSpacePass.None;
+    public TexelSpaceDebugMode debugPass = TexelSpaceDebugMode.None;
 
     public float memoryConsumption;
     protected override IRenderPipeline InternalCreatePipeline()

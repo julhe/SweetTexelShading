@@ -32,7 +32,7 @@ Shader "Unlit/SimpleUnlit"
 		Pass
 		{
 
-			Tags{ "LightMode" = "Coverage Pass" }
+			Tags{ "LightMode" = "Visibility Pass" }
 			
 			CGPROGRAM
 			#pragma vertex vert
@@ -64,19 +64,18 @@ Shader "Unlit/SimpleUnlit"
 			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
 			uint4 frag(v2f i, uint primID : SV_PrimitiveID) : SV_Target
 			{
-				//TODO: use worldsize instead
-				const float SUB_TEXTURE_SIZE = 8192;
 				float2 dx = ddx(i.uv * g_AtlasResolutionScale);
 				float2 dy = ddy(i.uv * g_AtlasResolutionScale);
 
-				float d = max(max(dot(dx, dx), dot(dy, dy)), 1);
-				// 2 ^ 13 = 8192 
-				d = min(log2(d) * 0.5, 13);
-				uint mipMapLevel =floor(13 -  d); //TODO: adjust 13 with SUB_TEXTURE_SIZE
+				// classic mipmap-level calculation
+				float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
+				rawMipMapLevel = min(log2(rawMipMapLevel) * 0.5, g_AtlasSizeExponent);
+
+				uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
 				uint objectID = _ObjectID_b[0];
 
-				// compute maximal lod level on-the-fly, which is very slow, but works so far.
-				// note: it is still possible that a part with a high mipmap level is occluded later!
+				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
+				// note: it's still possible that a part with a high mipmap level is occluded later! 
 				InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
 				
 				return EncodeVisibilityBuffer(objectID, primID, mipMapLevel);
@@ -86,7 +85,7 @@ Shader "Unlit/SimpleUnlit"
 
 		Pass
 			{
-
+			// aka PresentPass
 			Tags{ "LightMode" = "Vista Pass" }
 			CGPROGRAM
 				
@@ -128,10 +127,9 @@ Shader "Unlit/SimpleUnlit"
 			float g_atlasMorph;
 			half4 frag(v2f i) : SV_Target
 			{
-			//	return  float4( i.pos.xy / i.pos.w, 0, 1);
-				float3 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev).rgb;
-				float3 atlasB = tex2D(g_VistaAtlas, i.uv).rgb;
-				return float4(lerp(atlasA, atlasB, g_atlasMorph), 1);
+				float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
+				float4 atlasB = tex2D(g_VistaAtlas, i.uv);
+				return lerp(atlasA, atlasB, g_atlasMorph);
 			}
 			ENDCG
 		}
@@ -173,8 +171,6 @@ Shader "Unlit/SimpleUnlit"
 #endif
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
-				float4 triangleAABB : COLOR0;
-				float2 fragPos :COLOR1;
 			};
 #endif
 			// with lightmaps:
@@ -191,8 +187,6 @@ Shader "Unlit/SimpleUnlit"
 					UNITY_FOG_COORDS(6)
 					UNITY_VERTEX_INPUT_INSTANCE_ID
 					UNITY_VERTEX_OUTPUT_STEREO
-					float4 triangleAABB : COLOR0;
-				float2 fragPos :COLOR1;
 			};
 #endif
 			float4 _MainTex_ST;
@@ -215,8 +209,6 @@ Shader "Unlit/SimpleUnlit"
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				atlasCoord.y = 1 - atlasCoord.y;
 				o.pos = float4(atlasCoord * 2 - 1, 0, 1);
-				o.triangleAABB = 0;
-				o.fragPos = o.pos;
 				// 
 				o.pack0.xy = TRANSFORM_TEX(v.texcoord, _MainTex);
 				float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
@@ -259,7 +251,7 @@ Shader "Unlit/SimpleUnlit"
 
 #define FULLSCREEN_TRIANGLE_CULLING
 			float3 g_CameraPositionWS;
-			Buffer<uint> g_VertexIDVisiblity;
+			Buffer<uint> g_PrimitiveVisibility;
 
 
 			[maxvertexcount(3)]
@@ -270,7 +262,7 @@ Shader "Unlit/SimpleUnlit"
 				uint baseIndex, subIndex;
 				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
 
-				float visiblity = g_VertexIDVisiblity[baseIndex];// &(subIndex >> 1));
+				float visiblity = g_PrimitiveVisibility[baseIndex];// &(subIndex >> 1));
 #else
 				float3 averagePos = (p[0].worldPos + p[1].worldPos + p[2].worldPos) / 3.0;
 				float3 viewDir = normalize((averagePos) -g_CameraPositionWS);
@@ -283,12 +275,12 @@ Shader "Unlit/SimpleUnlit"
 					v2f_surf p0 = p[0];
 					v2f_surf p1 = p[1];
 					v2f_surf p2 = p[2];
-					// julian: source: https://github.com/otaku690/SparseVoxelOctree/blob/master/WIN/SVO/shader/voxelize.geom.glsl
+					// do conservative raserization 
+					// source: https://github.com/otaku690/SparseVoxelOctree/blob/master/WIN/SVO/shader/voxelize.geom.glsl
 					//Next we enlarge the triangle to enable conservative rasterization
 					float4 AABB;
 					float2 hPixel = float2(1.0 / _ScreenParams.x, 1.0 / _ScreenParams.y);
 					float pl = 1.4142135637309 / ( min(_ScreenParams.x, _ScreenParams.y));
-
 
 					//calculate AABB of this triangle
 					AABB.xy = p0.pos.xy;
@@ -303,11 +295,6 @@ Shader "Unlit/SimpleUnlit"
 					//Enlarge half-pixel
 					AABB.xy -= hPixel;
 					AABB.zw += hPixel;
-
-					// set AABB
-					p0.triangleAABB = AABB;
-					p1.triangleAABB = AABB;
-					p2.triangleAABB = AABB;
 
 					//find 3 triangle edge plane
 					float3 e0 = float3(p1.pos.xy - p0.pos.xy, 0);
@@ -324,11 +311,6 @@ Shader "Unlit/SimpleUnlit"
 					p1.pos.xy += pl*normalize((e0.xy / dot(e0.xy, n1.xy)) + (e1.xy / dot(e1.xy, n0.xy)));
 					p2.pos.xy += pl*normalize((e1.xy / dot(e1.xy, n2.xy)) + (e2.xy / dot(e2.xy, n1.xy)));
 
-					// obsolete 
-					p0.fragPos = e2.xy / dot(e2.xy, n0.xy);
-					p1.fragPos = e0.xy / dot(e0.xy, n1.xy);
-					p2.fragPos = e1.xy / dot(e1.xy, n2.xy);
-
 					triStream.Append(p0);
 					triStream.Append(p1);
 					triStream.Append(p2);
@@ -342,17 +324,8 @@ Shader "Unlit/SimpleUnlit"
 			sampler2D _SpecGlossMap, _OcclusionMap, _EmissionMap;
 			half4 frag (v2f_surf i) : SV_Target
 			{
-				// julian: obsolete boundary cliping here
-				//float2 screenspacePos = i.fragPos;// (i.pos.xy / i.pos.w) / _ScreenParams;
+				// this is unity's regular standard shader
 
-				//return float4(abs(screenspacePos), 0, 1);
-				//return float4(, 0, 1);
-				
-				//	if (screenspacePos.x < i.triangleAABB.x || screenspacePos.y < i.triangleAABB.y || screenspacePos.x > i.triangleAABB.z || screenspacePos.y > i.triangleAABB.w)
-				//		return float4(0,0,1,1);
-				//return 1;
-				//--------------------------
-				// surface
 				SurfaceOutputStandardSpecular s = (SurfaceOutputStandardSpecular)0;
 				s.Albedo = tex2D(_MainTex, i.pack0);
 				// sample the normal map, and decode from the Unity encoding

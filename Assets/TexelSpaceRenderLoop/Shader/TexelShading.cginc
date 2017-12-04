@@ -1,20 +1,19 @@
 #ifndef TEXEL_SHADING_INCLUDE
 
-
 #define MAXIMAL_OBJECTS_PER_VIEW 512
 #define MAX_PRIMITIVES_PER_OBJECT 8192
-#define PRIMITIVE_CLUSTER_SIZE 8
+#define PRIMITIVE_CLUSTER_SIZE 16.0
 #define COMPUTE_COVERAGE_TILE_SIZE 8
 #define ATLAS_TILE_SIZE 128
 #define ATLAS_OBJECT_SIZEEXPONENT_MIN 7 // 7^12 = ATLAS_TILE_SIZE, the minmal space an object can be in the atlas
-#define ATLAS_OBJECT_SIZEEXPONENT_MAX 12 // 2^12 = 4096, the maximal space an object can be in the atlas
+#define ATLAS_OBJECT_SIZEEXPONENT_MAX 12 // 2^12 = 4096, the maximal size an object can be in the atlas
 #define SINGLE_ROW_THREAD_SIZE 64
 #define BLOCK_THREAD_SIZE 8
-
+float g_AtlasSizeExponent;
 // --------common functions--------
 
 // Current VisiblityBufferLayout with RInt
-// r: 11bit objectID | 16bit primitiveID | 5 mipmap Level
+// r: 11bit objectID | 16bit primitiveID | 5bit mipmap Level
 uint EncodeVisibilityBuffer(uint objectID, uint primitiveID, uint mipmapLevel)
 {
 	return objectID | primitiveID << 11 | mipmapLevel << 27;

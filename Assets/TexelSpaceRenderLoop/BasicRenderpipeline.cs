@@ -23,22 +23,22 @@ public class BasicRenderpipeline : RenderPipeline
     const int PRIMITIVE_CLUSTER_SIZE = 8;
     static readonly ShaderPassName m_TexelSpacePass = new ShaderPassName("Texel Space Pass");
     static readonly ShaderPassName m_VistaPass = new ShaderPassName("Vista Pass");
-    static readonly ShaderPassName m_CoveragePass = new ShaderPassName("Coverage Pass");
+    static readonly ShaderPassName m_VisibilityPass = new ShaderPassName("Visibility Pass");
 
     public static Camera CURRENT_CAMERA { get; private set; }
     public static int SCREEN_X, SCREEN_Y;
 
     RenderTexture g_VistaAtlas_A, g_VistaAtlas_B;
     bool target_atlasA;
-    RenderTargetIdentifier g_ScreenVertexID_RT, g_CameraTarget_RT;
-    Vector2Int g_ScreenVertexID_dimension;
+    RenderTargetIdentifier g_visibilityBuffer_RT, g_CameraTarget_RT;
+    Vector2Int g_visibilityBuffer_dimension;
     const int kCameraDepthBufferBits = 32;
 
     CameraComparer m_CameraComparer = new CameraComparer();
     TexelSpaceRenderHelperComparer m_RenderHelperComparer = new TexelSpaceRenderHelperComparer();
-    int m_cs_CoverageToBuffer, g_ScreenVertexID, g_vertexIDVisiblity, m_cs_DebugCoverage, m_cs_AtlasPacking, m_cs_CopyDataToPreFrameBuffer, g_dummyRT;
+    int m_cs_ExtractVisibility, g_VisibilityBufferID, g_PrimitiveVisibilityID, m_cs_DebugVisibilityBuffer, m_cs_AtlasPacking, m_cs_CopyDataToPreFrameBuffer, g_dummyRT;
     ComputeShader m_ResolveCS;
-    ComputeBuffer g_vertexIDVisiblity_B, g_ObjectToAtlasProperties, g_prev_ObjectToAtlasProperties;
+    ComputeBuffer g_PrimitiveVisibility, g_ObjectToAtlasProperties, g_prev_ObjectToAtlasProperties;
     struct ObjectToAtlasProperties
     {
         public uint objectID;
@@ -47,32 +47,30 @@ public class BasicRenderpipeline : RenderPipeline
     }
 
 
-    int[] g_vertexIDVisiblity_B_init;
+    int[] g_PrimitiveVisibility_init;
     ObjectToAtlasProperties[] g_ObjectToAtlasProperties_init;
     BasicRenderpipelineAsset m_asset;
     float timeSinceLastRender = 0f;
-    Material fullscreenBlitMat;
+
     public BasicRenderpipeline(BasicRenderpipelineAsset asset)
     {
         m_asset = asset;
         Shader.globalRenderPipeline = PIPELINE_NAME;
-        fullscreenBlitMat = new Material(m_asset.resolveBlitShader);
-        fullscreenBlitMat.hideFlags = HideFlags.DontSaveInBuild | HideFlags.DontSaveInEditor;
         m_ResolveCS = asset.resolveShader;
 
         g_dummyRT = Shader.PropertyToID("g_dummyRT");
-        m_cs_CoverageToBuffer = m_ResolveCS.FindKernel("ExtractCoverage");
-        m_cs_DebugCoverage = m_ResolveCS.FindKernel("DebugShowVertexID");
+        m_cs_ExtractVisibility = m_ResolveCS.FindKernel("ExtractCoverage");
+        m_cs_DebugVisibilityBuffer = m_ResolveCS.FindKernel("DebugShowVertexID");
         m_cs_AtlasPacking = m_ResolveCS.FindKernel("AtlasPacking");
         m_cs_CopyDataToPreFrameBuffer = m_ResolveCS.FindKernel("CopyDataToPreFrameBuffer");
 
-        g_ScreenVertexID = Shader.PropertyToID("g_ScreenVertexID");
-        g_vertexIDVisiblity = Shader.PropertyToID("g_VertexIDVisiblity");
+        g_VisibilityBufferID = Shader.PropertyToID("g_VisibilityBuffer");
+        g_PrimitiveVisibilityID = Shader.PropertyToID("g_PrimitiveVisibility");
 
-        g_ScreenVertexID_RT = new RenderTargetIdentifier(g_ScreenVertexID);
+        g_visibilityBuffer_RT = new RenderTargetIdentifier(g_VisibilityBufferID);
 
-        g_vertexIDVisiblity_B = new ComputeBuffer((32 * MAX_PRIMITIVES_PER_OBJECT), sizeof(int));
-        g_vertexIDVisiblity_B_init = Enumerable.Repeat(0, g_vertexIDVisiblity_B.count).ToArray();
+        g_PrimitiveVisibility = new ComputeBuffer((32 * MAX_PRIMITIVES_PER_OBJECT), sizeof(int));
+        g_PrimitiveVisibility_init = Enumerable.Repeat(0, g_PrimitiveVisibility.count).ToArray();
 
         g_ObjectToAtlasProperties = new ComputeBuffer(MAXIMAL_OBJECTS_PER_VIEW, sizeof(uint) + sizeof(uint) + sizeof(float) * 4);
         g_prev_ObjectToAtlasProperties = new ComputeBuffer(g_ObjectToAtlasProperties.count, g_ObjectToAtlasProperties.stride);
@@ -87,7 +85,7 @@ public class BasicRenderpipeline : RenderPipeline
         base.Dispose();
         instance = null;
         Shader.globalRenderPipeline = "";
-        g_vertexIDVisiblity_B.Release();
+        g_PrimitiveVisibility.Release();
         g_ObjectToAtlasProperties.Release();
         g_prev_ObjectToAtlasProperties.Release();
         if(g_VistaAtlas_A != null)
@@ -127,11 +125,6 @@ public class BasicRenderpipeline : RenderPipeline
         }
     }
 
-    void ValidateScreenDependentBuffers()
-    {
-       
-    }
-
     CullResults m_CullResults;
     ScriptableRenderContext m_context;
 
@@ -151,7 +144,7 @@ public class BasicRenderpipeline : RenderPipeline
         SetupShaderGlobals();
         bool shouldUpdateAtlas =  timeSinceLastRender > (1f / m_asset.atlasRefreshFps);
 
-        g_vertexIDVisiblity_B.SetData(g_vertexIDVisiblity_B_init);
+        g_PrimitiveVisibility.SetData(g_PrimitiveVisibility_init);
         foreach (Camera camera in cameras)
         {
             CURRENT_CAMERA = camera;
@@ -178,7 +171,7 @@ public class BasicRenderpipeline : RenderPipeline
                 target_atlasA = !target_atlasA;
                 CopyDataToPreFrameBuffer();
                 SetupRenderBuffers();
-                RenderTexelCoverage(); // demiter pixel coverage 
+                RenderVisiblityPass(); // demiter pixel coverage 
                 PackAtlas(); // Pack new Atlas
                 RenderTexelShading(); // render texel space
                 
@@ -188,7 +181,7 @@ public class BasicRenderpipeline : RenderPipeline
 
             RenderVista(); // render final objects
 
-            if (m_asset.debugPass == TexelSpacePass.None)
+            if (m_asset.debugPass == TexelSpaceDebugMode.None)
             {
                 context.DrawSkybox(CURRENT_CAMERA);
             }
@@ -212,13 +205,13 @@ public class BasicRenderpipeline : RenderPipeline
         CommandBuffer cmd = CommandBufferPool.Get("SetupBuffers");
         int screen_x = CURRENT_CAMERA.pixelWidth;
         int screen_y = CURRENT_CAMERA.pixelHeight;
-        g_ScreenVertexID_dimension = new Vector2Int(
+        g_visibilityBuffer_dimension = new Vector2Int(
             Mathf.CeilToInt(screen_x / m_asset.visibilityPassDownscale),
             Mathf.CeilToInt(screen_y / m_asset.visibilityPassDownscale));
 
-        cmd.GetTemporaryRT(g_ScreenVertexID, g_ScreenVertexID_dimension.x, g_ScreenVertexID_dimension.y, 16, FilterMode.Point, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear, 1);
+        cmd.GetTemporaryRT(g_VisibilityBufferID, g_visibilityBuffer_dimension.x, g_visibilityBuffer_dimension.y, 16, FilterMode.Point, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear, 1);
 
-        cmd.SetRenderTarget(g_ScreenVertexID_RT);
+        cmd.SetRenderTarget(g_visibilityBuffer_RT);
         cmd.ClearRenderTarget(true, true, Color.clear);
 
         cmd.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
@@ -229,7 +222,7 @@ public class BasicRenderpipeline : RenderPipeline
           
         cmd.SetGlobalTexture("g_VistaAtlas", target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
         cmd.SetGlobalTexture("g_prev_VistaAtlas", target_atlasA ? g_VistaAtlas_B : g_VistaAtlas_A);
-
+        cmd.SetGlobalFloat("g_AtlasSizeExponent", m_asset.maximalAtlasSizeExponent);
         m_context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
     }
@@ -257,76 +250,68 @@ public class BasicRenderpipeline : RenderPipeline
     }
 
 
-    void RenderTexelCoverage()
+    void RenderVisiblityPass()
     {
 
         int screen_x = CURRENT_CAMERA.pixelWidth;
         int screen_y = CURRENT_CAMERA.pixelHeight;
-        // COVERAGE RENDER PASS
+        // VISIBLITY RENDER PASS
         // renders the current view as: objectID, primitveID and mipmap level
         CommandBuffer cmd = CommandBufferPool.Get("RenderTexelCoverage");
-        cmd.SetRenderTarget(g_ScreenVertexID);
+        cmd.SetRenderTarget(g_VisibilityBufferID);
         cmd.SetGlobalBuffer("g_ObjectToAtlasPropertiesRW", g_ObjectToAtlasProperties);
         cmd.SetRandomWriteTarget(1, g_ObjectToAtlasProperties);
 
         //g_vertexIDVisiblity_B.SetData(g_vertexIDVisiblity_B_init);
         m_context.ExecuteCommandBuffer(cmd);
 
-        RenderOpaque(m_CoveragePass, SortFlags.OptimizeStateChanges);
+        RenderOpaque(m_VisibilityPass, SortFlags.OptimizeStateChanges);
 
         cmd.Clear();
         cmd.ClearRandomWriteTargets();
 
-
-
-        //cmd.SetGlobalBuffer("g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
-        //cmd.SetGlobalBuffer("g_VertexIDVisiblity", g_vertexIDVisiblity_B);
-        //cmd.SetRandomWriteTarget(1, g_ObjectToAtlasProperties);
-        //cmd.SetRandomWriteTarget(2, g_vertexIDVisiblity_B);
-        //cmd.GetTemporaryRT(g_dummyRT, screen_x, screen_y, 0);
-
-        //cmd.Blit(g_ScreenVertexID_RT, g_dummyRT, fullscreenBlitMat);
-        //cmd.ClearRandomWriteTargets();
-
-        //if (m_asset.debugPass == TexelSpacePass.TexelScreenCoverage)
-        //{
-        //    cmd.Blit(g_dummyRT, BuiltinRenderTextureType.CameraTarget);
-        //}
-
-        // cmd.ReleaseTemporaryRT(g_dummyRT);
-
-        // COVERAGE DISSOLVE PASS
+        // VISIBLITY DISSOLVE PASS
         // maps the previous rendered data into usable buffers
-        cmd.SetComputeTextureParam(m_ResolveCS, m_cs_CoverageToBuffer, g_ScreenVertexID, g_ScreenVertexID_RT);
-        cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CoverageToBuffer, "g_VertexIDVisiblity", g_vertexIDVisiblity_B);
-        cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CoverageToBuffer, "g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
+        cmd.SetComputeTextureParam(m_ResolveCS, m_cs_ExtractVisibility, g_VisibilityBufferID, g_visibilityBuffer_RT);
+        cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, g_PrimitiveVisibilityID, g_PrimitiveVisibility);
+        cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, "g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
 
-        cmd.DispatchCompute(m_ResolveCS, m_cs_CoverageToBuffer, screen_x / COMPUTE_COVERAGE_TILE_SIZE, screen_y / COMPUTE_COVERAGE_TILE_SIZE, 1);
+        cmd.DispatchCompute(m_ResolveCS, m_cs_ExtractVisibility, screen_x / COMPUTE_COVERAGE_TILE_SIZE, screen_y / COMPUTE_COVERAGE_TILE_SIZE, 1);
 
         m_context.ExecuteCommandBuffer(cmd);
 
         cmd.Clear();
-        if (m_asset.debugPass == TexelSpacePass.TexelScreenCoverage)
+        // optional debug pass
+        switch (m_asset.debugPass)
         {
-            int debugView = Shader.PropertyToID("g_DebugTexture");
-            cmd.GetTemporaryRT(debugView, screen_x, screen_y, 16, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear, 1, true);
-            cmd.SetComputeTextureParam(m_ResolveCS, m_cs_DebugCoverage, g_ScreenVertexID, g_ScreenVertexID_RT);
-            cmd.SetComputeTextureParam(m_ResolveCS, m_cs_DebugCoverage, "g_DebugTexture", debugView);
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_DebugCoverage, "g_VertexIDVisiblity", g_vertexIDVisiblity_B);
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_DebugCoverage, "g_ObjectToAtlasPropertiesR", g_ObjectToAtlasProperties);
-            cmd.DispatchCompute(
-                m_ResolveCS,
-                m_cs_DebugCoverage,
-                screen_x / 8,
-                screen_y / 8,
-                1);
+            case TexelSpaceDebugMode.VisibilityPassObjectID:
+            case TexelSpaceDebugMode.VisibilityPassPrimitivID:
+            case TexelSpaceDebugMode.VisibilityPassMipMapPerObject:
+            case TexelSpaceDebugMode.VisibilityPassMipMapPerPixel:
 
-            cmd.Blit(debugView, BuiltinRenderTextureType.CameraTarget);
-            cmd.ReleaseTemporaryRT(debugView);
-            m_context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
+                int debugView = Shader.PropertyToID("g_DebugTexture");
+                cmd.GetTemporaryRT(debugView, screen_x, screen_y, 16, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear, 1, true);
+                cmd.SetComputeTextureParam(m_ResolveCS, m_cs_DebugVisibilityBuffer, g_VisibilityBufferID, g_visibilityBuffer_RT);
+                cmd.SetComputeTextureParam(m_ResolveCS, m_cs_DebugVisibilityBuffer, "g_DebugTexture", debugView);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_DebugVisibilityBuffer, "g_ObjectToAtlasPropertiesR", g_ObjectToAtlasProperties);
+                cmd.SetComputeIntParam(m_ResolveCS, "g_DebugPassID", (int)m_asset.debugPass);
+                cmd.DispatchCompute(
+                    m_ResolveCS,
+                    m_cs_DebugVisibilityBuffer,
+                    screen_x / 8,
+                    screen_y / 8,
+                    1);
+
+                cmd.Blit(debugView, BuiltinRenderTextureType.CameraTarget);
+                cmd.ReleaseTemporaryRT(debugView);
+
+                m_context.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
+
+                break;
+            default:
+                break;
         }
-
         CommandBufferPool.Release(cmd);
     }
 
@@ -336,7 +321,7 @@ public class BasicRenderpipeline : RenderPipeline
     {
         CommandBuffer cmd = CommandBufferPool.Get("RenderTexelShading");
         cmd.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
-        cmd.SetGlobalBuffer(g_vertexIDVisiblity, g_vertexIDVisiblity_B);
+        cmd.SetGlobalBuffer(g_PrimitiveVisibilityID, g_PrimitiveVisibility);
         cmd.SetGlobalBuffer("g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
         cmd.SetGlobalBuffer("g_prev_ObjectToAtlasProperties", g_prev_ObjectToAtlasProperties);
         m_context.ExecuteCommandBuffer(cmd);
@@ -344,7 +329,7 @@ public class BasicRenderpipeline : RenderPipeline
         RenderOpaque(m_TexelSpacePass, SortFlags.OptimizeStateChanges, rendererConfiguration_shading);
 
         cmd.Clear();
-        if (m_asset.debugPass == TexelSpacePass.TexelSpaceShading)
+        if (m_asset.debugPass == TexelSpaceDebugMode.TexelShadingPass)
         {
             cmd.Blit(g_VistaAtlas_A, BuiltinRenderTextureType.CameraTarget);
             m_context.ExecuteCommandBuffer(cmd);
@@ -377,7 +362,7 @@ public class BasicRenderpipeline : RenderPipeline
         m_context.ExecuteCommandBuffer(cmd); // apply globals
 
         cmd.Clear();
-        if (m_asset.debugPass == TexelSpacePass.None)
+        if (m_asset.debugPass == TexelSpaceDebugMode.None)
         {
             RenderOpaque(m_VistaPass, SortFlags.CommonOpaque);  // render
         }
@@ -385,24 +370,6 @@ public class BasicRenderpipeline : RenderPipeline
         m_context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
 
-
-    }
-    //TODO: BROKEN
-    void RenderForwardFallback()
-    {
-        CommandBuffer cmd = CommandBufferPool.Get("Render ForwardFallback");
-
-        // setup globals
-        cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
-        m_context.ExecuteCommandBuffer(cmd); // apply globals
-
-        cmd.Clear();
-        if (m_asset.debugPass == TexelSpacePass.None)
-        {
-            RenderOpaque(new ShaderPassName(), SortFlags.CommonOpaque);  // render
-        }
-
-        CommandBufferPool.Release(cmd);
 
     }
 
@@ -422,12 +389,12 @@ public class BasicRenderpipeline : RenderPipeline
     void ReleaseBuffers()
     {
         CommandBuffer cmd = CommandBufferPool.Get("ReleaseBuffers");
-        cmd.ReleaseTemporaryRT(g_vertexIDVisiblity);
+        cmd.ReleaseTemporaryRT(g_PrimitiveVisibilityID);
         m_context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
     }
 
-    // Atlas packing - should be moved on gpu some day
+    // Atlas packing 
     List<TexelSpaceRenderHelper> visibleObjects = new List<TexelSpaceRenderHelper>();
     public void AddObject(TexelSpaceRenderHelper texelSpaceRenderHelper)
     {
@@ -484,19 +451,19 @@ public class BasicRenderpipeline : RenderPipeline
         visibleObjects.Clear();
 #endif
         visibleObjects.Clear();
-        //Debug.Assert(HardValidateAtlas(atlas_debug), "One (or more) textures overlap in the atlas!");
         m_context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
     }
-
 }
 
-public enum TexelSpacePass
+public enum TexelSpaceDebugMode
 {
     None = 0,
-    TexelScreenCoverage,
-    TexelSpaceShading,
-    PresentTexel
+    VisibilityPassObjectID,
+    VisibilityPassPrimitivID,
+    VisibilityPassMipMapPerObject,
+    VisibilityPassMipMapPerPixel,
+    TexelShadingPass,
 }
 
 public class CameraComparer : IComparer<Camera>
