@@ -20,6 +20,7 @@ public class BasicRenderpipelineAsset : RenderPipelineAsset
     public float atlasResolutionScale = 1024f;
     public float visibilityPassDownscale = 1f;
     public float atlasRefreshFps = 30;
+    public int MSSALevel;
     public bool clearAtlasOnRefresh = false;
     public TexelSpaceDebugMode debugPass = TexelSpaceDebugMode.None;
 

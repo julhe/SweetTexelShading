@@ -38,7 +38,7 @@ void GetVisiblityIDIndicies(uint objectID, uint primitiveID, out uint baseIndex,
 struct ObjectToAtlasProperties
 {
 	uint objectID; // the original object ID, used to trace back the object after sorting
-	uint desiredAtlasSpace_axis; // the length of the texture inside the atlas
+	uint sizeExponent; // the length of the texture inside the atlas
 	float4 atlas_ST; // scale and offset to transform uv coords into atlas space
 };
 

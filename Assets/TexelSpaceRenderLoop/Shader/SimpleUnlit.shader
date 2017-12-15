@@ -71,13 +71,15 @@ Shader "Unlit/SimpleUnlit"
 				float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
 				rawMipMapLevel = min(log2(rawMipMapLevel) * 0.5, g_AtlasSizeExponent);
 
+				uint clusterID = floor(i.uv.x * 8 *8 + i.uv.y * 8);
 				uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
 				uint objectID = _ObjectID_b[0];
 
 				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
 				// note: it's still possible that a part with a high mipmap level is occluded later! 
-				InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
+				// InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
 				
+
 				return EncodeVisibilityBuffer(objectID, primID, mipMapLevel);
 			}
 			ENDCG
@@ -129,6 +131,7 @@ Shader "Unlit/SimpleUnlit"
 			{
 				float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
 				float4 atlasB = tex2D(g_VistaAtlas, i.uv);
+				
 				return lerp(atlasA, atlasB, g_atlasMorph);
 			}
 			ENDCG
@@ -157,7 +160,7 @@ Shader "Unlit/SimpleUnlit"
 #ifndef LIGHTMAP_ON
 			struct v2f_surf {
 				UNITY_POSITION(pos);
-				float2 pack0 : TEXCOORD0; // _MainTex
+				float4 pack0 : TEXCOORD0; // _MainTex
 				float4 tSpace0 : TEXCOORD1;
 				float4 tSpace1 : TEXCOORD2;
 				float4 tSpace2 : TEXCOORD3;
@@ -177,7 +180,7 @@ Shader "Unlit/SimpleUnlit"
 #ifdef LIGHTMAP_ON
 			struct v2f_surf {
 				UNITY_POSITION(pos);
-				float2 pack0 : TEXCOORD0; // _MainTex
+				float4 pack0 : TEXCOORD0; // _MainTex
 				float4 tSpace0 : TEXCOORD1;
 				float4 tSpace1 : TEXCOORD2;
 				float4 tSpace2 : TEXCOORD3;
@@ -211,6 +214,8 @@ Shader "Unlit/SimpleUnlit"
 				o.pos = float4(atlasCoord * 2 - 1, 0, 1);
 				// 
 				o.pack0.xy = TRANSFORM_TEX(v.texcoord, _MainTex);
+				o.pack0.zw = v.texcoord1;
+
 				float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 				fixed3 worldNormal = UnityObjectToWorldNormal(v.normal);
 				fixed3 worldTangent = UnityObjectToWorldDir(v.tangent.xyz);
@@ -324,23 +329,29 @@ Shader "Unlit/SimpleUnlit"
 			sampler2D _SpecGlossMap, _OcclusionMap, _EmissionMap;
 			half4 frag (v2f_surf i) : SV_Target
 			{
-				// this is unity's regular standard shader
+		
+				
+				//float2 clusterID = floor(i.pack0.zw * 16) / 16.0;
+				//float clusterIDScalar = clusterID.x * 16.0 + clusterID.y;
+				//float3 colorCode = float3(clusterID, 0);
+				//return float4(colorCode, 1);
 
+				// this is unity's regular standard shader
 				SurfaceOutputStandardSpecular s = (SurfaceOutputStandardSpecular)0;
-				s.Albedo = tex2D(_MainTex, i.pack0);
+				s.Albedo = tex2D(_MainTex, i.pack0.xy);
 				// sample the normal map, and decode from the Unity encoding
-				half3 tnormal = UnpackNormal(tex2D(_BumpMap, i.pack0));
+				half3 tnormal = UnpackNormal(tex2D(_BumpMap, i.pack0.xy));
 				// transform normal from tangent to world space
 				half3 worldNormal;
 				worldNormal.x = dot(i.tSpace0, tnormal);
 				worldNormal.y = dot(i.tSpace1, tnormal);
 				worldNormal.z = dot(i.tSpace2, tnormal);
 				s.Normal = worldNormal;
-				float4 specGloss = tex2D(_SpecGlossMap, i.pack0);
+				float4 specGloss = tex2D(_SpecGlossMap, i.pack0.xy);
 				s.Smoothness = specGloss.a * _Smoothness;
 				s.Specular = specGloss.rgb * _Specular;
-				s.Occlusion = tex2D(_OcclusionMap, i.pack0);
-				s.Emission = tex2D(_EmissionMap, i.pack0) * _EmissionColor;
+				s.Occlusion = tex2D(_OcclusionMap, i.pack0.xy);
+				s.Emission = tex2D(_EmissionMap, i.pack0.xy) * _EmissionColor;
 				//
 
 				float3 worldPos = float3(i.tSpace0.w, i.tSpace1.w, i.tSpace2.w);

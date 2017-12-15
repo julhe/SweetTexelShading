@@ -16,7 +16,8 @@ MonoBehaviour:
   maximalAtlasSizeExponent: 13
   atlasResolutionScale: 12000
   visibilityPassDownscale: 1
-  atlasRefreshFps: 40000
-  clearAtlasOnRefresh: 0
-  debugPass: 0
+  atlasRefreshFps: 40002.08
+  MSSALevel: 1
+  clearAtlasOnRefresh: 1
+  debugPass: 3
   memoryConsumption: 512

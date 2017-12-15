@@ -101,4 +101,5 @@ Material:
     - _MetaSpecularAdd: {r: 0.25, g: 0.25, b: 0.25, a: 1}
     - _MetaSpecularTint: {r: 1, g: 0.97058815, b: 0.9264706, a: 1}
     - _SpecColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
+    - _Specular: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _SpecularColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}

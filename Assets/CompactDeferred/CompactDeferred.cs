@@ -7,11 +7,7 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.XR;
 
-class ComputeBufferWithData<T>
-{
-    public T[] data;
-    public ComputeBuffer buffer;
-}
+
 public class CompactDeferred : RenderPipeline
 {
     public static CompactDeferred instance;
@@ -211,20 +207,3 @@ public class CompactDeferred : RenderPipeline
     }
 }
 
-public enum TexelSpaceDebugMode
-{
-    None = 0,
-    VisibilityPassObjectID,
-    VisibilityPassPrimitivID,
-    VisibilityPassMipMapPerObject,
-    VisibilityPassMipMapPerPixel,
-    TexelShadingPass,
-}
-
-public class CameraComparer : IComparer<Camera>
-{
-    public int Compare(Camera lhs, Camera rhs)
-    {
-        return (int)(rhs.depth - lhs.depth);
-    }
-}

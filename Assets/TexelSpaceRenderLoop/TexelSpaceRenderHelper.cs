@@ -6,12 +6,9 @@ using UnityEngine;
 public class TexelSpaceRenderHelper : MonoBehaviour
 {
 
-    public float screenArea;
     MeshRenderer meshRenderer;
     public int atlasSize = 16;
-    public bool lockAtlasSize = false;
     public int objectID;
-    public Vector4 atlasRect;
     ComputeBuffer objectID_b, prev_objectID_b;
     uint[] objectID_b_data = new uint[1];
     uint[] prev_objectID_b_data = new uint[1];
@@ -51,7 +48,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 
     }
 
-    public void SetAtlasProperties(Vector4 atlasPackingRect, int objectID)
+    public void SetAtlasProperties(int objectID)
     {
         MaterialPropertyBlock matProbBlock = new MaterialPropertyBlock();
 
@@ -61,8 +58,6 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         objectID_b_data[0] = (uint) objectID;
         objectID_b.SetData(objectID_b_data);
 
-        this.atlasRect = atlasPackingRect;
-        matProbBlock.SetVector("_AtlasScaleOffset", atlasPackingRect);
         matProbBlock.SetBuffer("_ObjectID_b", objectID_b);
         matProbBlock.SetBuffer("_prev_ObjectID_b", prev_objectID_b);
         if (meshRenderer != null)
