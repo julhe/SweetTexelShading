@@ -8,7 +8,6 @@ uint g_totalObjectsInView;
 // copys data to prev buffer, and initalizes 'g_ObjectToAtlasProperties' 
 // TODO: can be done with a simple reference swap?!
 // -----------------------------------------------------------------------------
-
 #pragma kernel CopyDataToPreFrameBuffer
 RWStructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
 RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
@@ -24,11 +23,20 @@ void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : 
 	g_ObjectToAtlasProperties[index].atlas_ST = 0;
 }
 
+
+#pragma kernel InitalizePrimitiveVisiblity
+/*globallycoherent*/ RWStructuredBuffer<uint> g_PrimitiveVisibility;
+[numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
+void InitalizePrimitiveVisiblity(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+{
+	g_PrimitiveVisibility[id.x] = 0;
+}
+
 // reads the VisibilityBuffer and extracts the visible triangles
 // -----------------------------------------------------------------------------
 #pragma kernel ExtractCoverage
 Texture2D<uint> g_VisibilityBuffer;
-RWBuffer<uint> g_PrimitiveVisibility;
+
 
 uint2 g_VisibilityBuffer_pixelCount;
 groupshared uint shared_Object_MipmapLevel[MAXIMAL_OBJECTS_PER_VIEW];
@@ -48,7 +56,6 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 	uint px;
 
 	px = g_VisibilityBuffer[id.xy];
-
 	DecodeVisibilityBuffer(
 		px,
 		/*out*/ objectID,
@@ -63,7 +70,8 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 		// "unlock" the triangle for the texel space pass 
 		uint baseIndex, subIndex;
 		GetVisiblityIDIndicies(objectID, primitiveID, /*out*/ baseIndex, /*out*/ subIndex);
-		g_PrimitiveVisibility[baseIndex] = 1;
+		//InterlockedOr(g_PrimitiveVisibility[baseIndex], 1 << subIndex);
+		g_PrimitiveVisibility[baseIndex] |= 1 << subIndex;
 	}
 
 	AllMemoryBarrierWithGroupSync();
@@ -104,9 +112,9 @@ void MipMapMeltDown(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIn
 	InterlockedMax(shared_Object_MipmapLevel[objectID], mipmapLevel);
 
 	// store data
-	for (int i = 0; i < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); i++)
+	for (int j = 0; j < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); j++)
 	{
-		int index = i + groupIndex * COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE;
+		int index = j + groupIndex * COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE;
 		g_ObjectMipMap_append.Append(shared_Object_MipmapLevel[index]);
 	}
 }
@@ -231,7 +239,7 @@ void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupInde
 	}
 	AllMemoryBarrierWithGroupSync();
 
-	for (uint j = 15 ; 7 <= j; j--)
+	for (uint j = ATLAS_OBJECT_SIZEEXPONENT_MAX; ATLAS_OBJECT_SIZEEXPONENT_MIN <= j; j--)
 	{
 		for (uint i = 1; i < g_totalObjectsInView; i++)
 		{

@@ -2,7 +2,7 @@
 
 #define MAXIMAL_OBJECTS_PER_VIEW 512
 #define MAX_PRIMITIVES_PER_OBJECT 8192
-#define PRIMITIVE_CLUSTER_SIZE 16.0
+#define PRIMITIVE_CLUSTER_SIZE 8.0
 #define COMPUTE_COVERAGE_TILE_SIZE 8
 #define ATLAS_TILE_SIZE 128
 #define ATLAS_OBJECT_SIZEEXPONENT_MIN 7 // 7^12 = ATLAS_TILE_SIZE, the minmal space an object can be in the atlas
@@ -29,10 +29,10 @@ void DecodeVisibilityBuffer(uint encodedValue, out uint objectID, out uint primi
 void GetVisiblityIDIndicies(uint objectID, uint primitiveID, out uint baseIndex, out uint subIndex)
 {
 	uint index = objectID * MAX_PRIMITIVES_PER_OBJECT + floor(primitiveID / (float)PRIMITIVE_CLUSTER_SIZE);
-	baseIndex = index / 32;
+	baseIndex = floor(index / 32.0);
 	subIndex = index % 32;
 
-	baseIndex = index;
+	//baseIndex = index;
 }
 
 struct ObjectToAtlasProperties

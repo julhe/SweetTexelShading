@@ -7,7 +7,6 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 {
 
     MeshRenderer meshRenderer;
-    public int atlasSize = 16;
     public int objectID;
     ComputeBuffer objectID_b, prev_objectID_b;
     uint[] objectID_b_data = new uint[1];
@@ -97,13 +96,5 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         float l2 = Vector3.Dot(o, o);
 
         return -3.14159f * fl * fl * r2 * Mathf.Sqrt(Mathf.Abs((l2 - r2) / (r2 - z2))) / (r2 - z2);
-    }
-}
-
-public class TexelSpaceRenderHelperComparer : IComparer<TexelSpaceRenderHelper>
-{
-    public int Compare(TexelSpaceRenderHelper lhs, TexelSpaceRenderHelper rhs)
-    {
-        return (int)(rhs.atlasSize - lhs.atlasSize);
     }
 }

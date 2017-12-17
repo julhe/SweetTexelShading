@@ -256,7 +256,7 @@ Shader "Unlit/SimpleUnlit"
 
 #define FULLSCREEN_TRIANGLE_CULLING
 			float3 g_CameraPositionWS;
-			Buffer<uint> g_PrimitiveVisibility;
+			StructuredBuffer<uint> g_PrimitiveVisibility;
 
 
 			[maxvertexcount(3)]
@@ -267,15 +267,19 @@ Shader "Unlit/SimpleUnlit"
 				uint baseIndex, subIndex;
 				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
 
-				float visiblity = g_PrimitiveVisibility[baseIndex];// &(subIndex >> 1));
+				uint visiblity = g_PrimitiveVisibility[baseIndex] & (1 << subIndex);
 #else
-				float3 averagePos = (p[0].worldPos + p[1].worldPos + p[2].worldPos) / 3.0;
+				float3 averagePos =
+					float3(p[0].tSpace0.w, p[0].tSpace1.w, p[0].tSpace2.w) +
+					float3(p[1].tSpace0.w, p[1].tSpace1.w, p[1].tSpace2.w) +
+					float3(p[2].tSpace0.w, p[2].tSpace1.w, p[2].tSpace2.w);
+				averagePos /= 3.0;
 				float3 viewDir = normalize((averagePos) -g_CameraPositionWS);
-				float3 averageNormal = normalize(p[0].normal + p[1].normal + p[2].normal);
+				float3 averageNormal = normalize(p[0].tSpace0 + p[1].tSpace0 + p[2].tSpace0);
 
 				float visiblity = dot(averageNormal, viewDir);
 #endif
-				if (visiblity > 0)
+				if (visiblity != 0)
 				{
 					v2f_surf p0 = p[0];
 					v2f_surf p1 = p[1];
@@ -285,7 +289,7 @@ Shader "Unlit/SimpleUnlit"
 					//Next we enlarge the triangle to enable conservative rasterization
 					float4 AABB;
 					float2 hPixel = float2(1.0 / _ScreenParams.x, 1.0 / _ScreenParams.y);
-					float pl = 1.4142135637309 / ( min(_ScreenParams.x, _ScreenParams.y));
+					float pl = 1.4142135637309 / ( max(_ScreenParams.x, _ScreenParams.y));
 
 					//calculate AABB of this triangle
 					AABB.xy = p0.pos.xy;
@@ -329,8 +333,8 @@ Shader "Unlit/SimpleUnlit"
 			sampler2D _SpecGlossMap, _OcclusionMap, _EmissionMap;
 			half4 frag (v2f_surf i) : SV_Target
 			{
-		
-				
+
+				//return 1;
 				//float2 clusterID = floor(i.pack0.zw * 16) / 16.0;
 				//float clusterIDScalar = clusterID.x * 16.0 + clusterID.y;
 				//float3 colorCode = float3(clusterID, 0);

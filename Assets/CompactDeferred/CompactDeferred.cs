@@ -68,7 +68,7 @@ public class CompactDeferred : RenderPipeline
         g_BufferRT = new RenderTargetIdentifier(g_GBuffer);
         g_PosBufferRT = new RenderTargetIdentifier(g_PosBuffer);
 
-        g_PrimitiveVisibility = new ComputeBuffer((32 * MAX_PRIMITIVES_PER_OBJECT), sizeof(int));
+        g_PrimitiveVisibility = new ComputeBuffer((128 * MAX_PRIMITIVES_PER_OBJECT), sizeof(int));
         g_PrimitiveVisibility_init = Enumerable.Repeat(0, g_PrimitiveVisibility.count).ToArray();
 
         g_ObjectToAtlasProperties = new ComputeBuffer(MAXIMAL_OBJECTS_PER_VIEW, sizeof(uint) + sizeof(uint) + sizeof(float) * 4);
