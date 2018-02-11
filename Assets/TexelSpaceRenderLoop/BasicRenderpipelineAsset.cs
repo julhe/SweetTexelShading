@@ -10,7 +10,7 @@ public class BasicRenderpipelineAsset : RenderPipelineAsset
 
     public ComputeShader resolveShader;
     public Shader resolveBlitShader;
-    [Range(3, 13)]
+    [Range(3, 14)]
     public int maximalAtlasSizeExponent;
     public int maximalAtlasSizePixel
     {

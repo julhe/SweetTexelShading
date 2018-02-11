@@ -22,8 +22,7 @@ Shader "Unlit/SimpleUnlit"
 		#include "TexelShading.cginc" 
 
 		#pragma enable_d3d11_debug_symbols
-		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
-		StructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
+
 		StructuredBuffer<uint> _ObjectID_b, _prev_ObjectID_b; // wrap the objectID inside a buffer, since ints cant be set over a materialproperty block
 	
 		float g_AtlasResolutionScale;
@@ -36,6 +35,7 @@ Shader "Unlit/SimpleUnlit"
 			
 			CGPROGRAM
 			#pragma vertex vert
+			#pragma geometry geom
 			#pragma fragment frag
 			#pragma target 5.0
 			#include "UnityCG.cginc"
@@ -51,6 +51,7 @@ Shader "Unlit/SimpleUnlit"
 				float4 vertex : SV_POSITION;
 				float3 worldPos : COLOR;
 				float2 uv : TEXCOORD0;
+				uint primID : TEXCOORD1;
 			};
 
 			v2f vert(appdata v)
@@ -59,9 +60,42 @@ Shader "Unlit/SimpleUnlit"
 				o.vertex = UnityObjectToClipPos(v.vertex);
 				o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 				o.uv = v.uv;
+				o.primID = 0;
 				return o;
 			}
-			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
+
+
+			[maxvertexcount(3)]
+			void geom(triangle v2f p[3], inout TriangleStream<v2f> triStream, in uint primID : SV_PrimitiveID)
+			{
+				v2f p0 = p[0];
+				v2f p1 = p[1];
+				v2f p2 = p[2];
+
+				uint baseIndex, subIndex;
+				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
+				//MapTriangleToAtlas(p0.uv, p1.uv, p2.uv, g_PrimitiveLocation[baseIndex], g_PrimitiveMipMapLevel[baseIndex]);
+
+
+				p0.uv = 0.0;
+				p1.uv = float2(0.0, 1.0);
+				p2.uv = float2(1.0, 0.0);
+
+				p0.primID = primID;
+				p1.primID = primID;
+				p2.primID = primID;
+				//p0.uv.y = 1.0 - p0.uv.y;
+				//p1.uv.y = 1.0 - p1.uv.y;
+				//p2.uv.y = 1.0 - p2.uv.y;
+
+				triStream.Append(p0);
+				triStream.Append(p1);
+				triStream.Append(p2);
+				triStream.RestartStrip();
+
+			}
+
+			RWStructuredBuffer<uint> g_PrimitiveMipMapLevel;
 			uint4 frag(v2f i, uint primID : SV_PrimitiveID) : SV_Target
 			{
 				float2 dx = ddx(i.uv * g_AtlasResolutionScale);
@@ -69,33 +103,42 @@ Shader "Unlit/SimpleUnlit"
 
 				// classic mipmap-level calculation
 				float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
-				rawMipMapLevel = min(log2(rawMipMapLevel) * 0.5, g_AtlasSizeExponent);
+				rawMipMapLevel = log2(rawMipMapLevel) * 0.5;
 
-				uint clusterID = floor(i.uv.x * 8 *8 + i.uv.y * 8);
-				uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
+				//uint clusterID = floor(i.uv.x * 8 *8 + i.uv.y * 8);
+				uint mipMapLevel = ATLAS_OBJECT_SIZEEXPONENT_MAX - clamp(floor(rawMipMapLevel), ATLAS_OBJECT_SIZEEXPONENT_MIN, ATLAS_OBJECT_SIZEEXPONENT_MAX);
 				uint objectID = _ObjectID_b[0];
+				uint baseIndex, subIndex;
+				GetVisiblityIDIndicies(objectID, i.primID, /*out*/ baseIndex, /*out*/ subIndex);
 
-				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
+				// compute maximal lod level per object on-the-fly, which is very slow, but works mostly.
 				// note: it's still possible that a part with a high mipmap level is occluded later! 
-				// InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
+				//InterlockedMax(g_PrimitiveMipMapLevel[baseIndex], mipMapLevel);
 				
-
-				return EncodeVisibilityBuffer(objectID, primID, mipMapLevel);
+				//g_PrimitiveMipMapLevel[baseIndex] = 1;//mipMapLevel;
+				return EncodeVisibilityBuffer(objectID, i.primID, mipMapLevel);
 			}
 			ENDCG
 		}
 
 		Pass
 			{
+
 			// aka PresentPass
 			Tags{ "LightMode" = "Vista Pass" }
 			CGPROGRAM
 				
 			#pragma vertex vert
+			#pragma geometry geom
 			#pragma fragment frag
 
 			#include "UnityCG.cginc"
 
+			struct output
+			{
+				float4 color : SV_Target0;
+				uint4 visiblity : SV_Target1;
+			};
 			struct appdata
 			{
 				float4 pos : POSITION;
@@ -105,8 +148,6 @@ Shader "Unlit/SimpleUnlit"
 			struct v2f
 			{
 				float2 uv : TEXCOORD0;
-				float2 uvPrev : TEXCOORD1;
-
 				float4 pos : SV_POSITION;
 			};
 
@@ -117,22 +158,43 @@ Shader "Unlit/SimpleUnlit"
 				v2f o;
 				o.pos = UnityObjectToClipPos(v.pos);
 				o.uv = v.uv;
-				o.uvPrev = o.uv;
-				float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
-				o.uv = (v.uv * atlasScaleOffset.xy) + atlasScaleOffset.zw;
-				float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b[0]].atlas_ST;
-				o.uvPrev = (v.uv * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
-
 				return o;
 			}
 
+			StructuredBuffer<uint> g_PrimitiveMipMapLevel, g_PrimitiveLocation;
+			[maxvertexcount(3)]
+			void geom(triangle v2f p[3], inout TriangleStream<v2f> triStream, in uint primID : SV_PrimitiveID)
+			{
+				v2f p0 = p[0];
+				v2f p1 = p[1];
+				v2f p2 = p[2];
+
+				uint baseIndex, subIndex;
+				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
+				MapTriangleToAtlas(p0.uv, p1.uv, p2.uv, g_PrimitiveLocation[baseIndex], g_PrimitiveMipMapLevel[baseIndex]);
+
+				p0.uv.y = 1.0 - p0.uv.y;
+				p1.uv.y = 1.0 - p1.uv.y;
+				p2.uv.y = 1.0 - p2.uv.y;
+
+				triStream.Append(p0);
+				triStream.Append(p1);
+				triStream.Append(p2);
+				triStream.RestartStrip();
+
+			}
 			float g_atlasMorph;
 			half4 frag(v2f i) : SV_Target
 			{
-				float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
+
+
+				//float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
+				//atlasA.rgb /= atlasA.a; //extrapolate at seams
 				float4 atlasB = tex2D(g_VistaAtlas, i.uv);
-				
-				return lerp(atlasA, atlasB, g_atlasMorph);
+				atlasB.rgb /= atlasB.a;
+
+				//return float4(i.uv, 0, 1);
+				return float4(atlasB.rgb, 1.0);
 			}
 			ENDCG
 		}
@@ -208,8 +270,8 @@ Shader "Unlit/SimpleUnlit"
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 				float2 atlasCoord = v.texcoord1;
-				float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
-				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
+				//float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
+				//atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				atlasCoord.y = 1 - atlasCoord.y;
 				o.pos = float4(atlasCoord * 2 - 1, 0, 1);
 				// 
@@ -256,8 +318,8 @@ Shader "Unlit/SimpleUnlit"
 
 #define FULLSCREEN_TRIANGLE_CULLING
 			float3 g_CameraPositionWS;
-			Buffer<uint> g_PrimitiveVisibility;
-
+			StructuredBuffer<uint> g_PrimitiveVisibility;
+			StructuredBuffer<uint> g_PrimitiveMipMapLevel, g_PrimitiveLocation;
 
 			[maxvertexcount(3)]
 			void geom(triangle v2f_surf p[3], inout TriangleStream<v2f_surf> triStream, in uint primID : SV_PrimitiveID)
@@ -267,7 +329,7 @@ Shader "Unlit/SimpleUnlit"
 				uint baseIndex, subIndex;
 				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
 
-				float visiblity = g_PrimitiveVisibility[baseIndex];// &(subIndex >> 1));
+				uint visiblity = g_PrimitiveVisibility[baseIndex];// &(subIndex >> 1));
 #else
 				float3 averagePos = (p[0].worldPos + p[1].worldPos + p[2].worldPos) / 3.0;
 				float3 viewDir = normalize((averagePos) -g_CameraPositionWS);
@@ -280,6 +342,11 @@ Shader "Unlit/SimpleUnlit"
 					v2f_surf p0 = p[0];
 					v2f_surf p1 = p[1];
 					v2f_surf p2 = p[2];
+
+					//MapTriangleTo01(p0.pos.xy, p1.pos.xy, p2.pos.xy);
+					MapTriangleToAtlas(p0.pos.xy, p1.pos.xy, p2.pos.xy, g_PrimitiveLocation[baseIndex], g_PrimitiveMipMapLevel[baseIndex]);
+					MapTriangleToFull(p0.pos.xy, p1.pos.xy, p2.pos.xy);
+#ifdef MIMMIC_CONSERVATIVE_RASTERISATION
 					// do conservative raserization 
 					// source: https://github.com/otaku690/SparseVoxelOctree/blob/master/WIN/SVO/shader/voxelize.geom.glsl
 					//Next we enlarge the triangle to enable conservative rasterization
@@ -315,7 +382,7 @@ Shader "Unlit/SimpleUnlit"
 					p0.pos.xy += pl*normalize((e2.xy / dot(e2.xy, n0.xy)) + (e0.xy / dot(e0.xy, n2.xy)));
 					p1.pos.xy += pl*normalize((e0.xy / dot(e0.xy, n1.xy)) + (e1.xy / dot(e1.xy, n0.xy)));
 					p2.pos.xy += pl*normalize((e1.xy / dot(e1.xy, n2.xy)) + (e2.xy / dot(e2.xy, n1.xy)));
-
+#endif
 					triStream.Append(p0);
 					triStream.Append(p1);
 					triStream.Append(p2);
@@ -327,14 +394,14 @@ Shader "Unlit/SimpleUnlit"
 			float3 g_LightDir, _EmissionColor;
 			float _Smoothness;
 			sampler2D _SpecGlossMap, _OcclusionMap, _EmissionMap;
-			half4 frag (v2f_surf i) : SV_Target
+			half4 frag (v2f_surf i, in uint primID : SV_PrimitiveID) : SV_Target
 			{
 		
 				
 				//float2 clusterID = floor(i.pack0.zw * 16) / 16.0;
 				//float clusterIDScalar = clusterID.x * 16.0 + clusterID.y;
 				//float3 colorCode = float3(clusterID, 0);
-				//return float4(colorCode, 1);
+				//return debugColorBand(primID);//float4(1, 0, 0, 1);
 
 				// this is unity's regular standard shader
 				SurfaceOutputStandardSpecular s = (SurfaceOutputStandardSpecular)0;

@@ -298,11 +298,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3625.4795
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 0
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 1
 --- !u!1 &36028748 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100000, guid: 9ef9b025b5c36db4599d792744079d47, type: 3}
@@ -318,11 +315,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 19.197277
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 2
 --- !u!1 &66490340 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100000, guid: b89b16069544ade49a8f7de2dd1bcca6, type: 3}
@@ -338,11 +332,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 71143.336
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 19
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &76370970
 GameObject:
   m_ObjectHideFlags: 0
@@ -637,11 +628,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3404.2544
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 0
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 1
 --- !u!1 &106231029
 GameObject:
   m_ObjectHideFlags: 0
@@ -872,11 +860,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 12715.771
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 0
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 1
 --- !u!1001 &133847534
 Prefab:
   m_ObjectHideFlags: 0
@@ -952,11 +937,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 5160.0327
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 12
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1001 &139605727
 Prefab:
   m_ObjectHideFlags: 0
@@ -1306,11 +1288,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 17219.033
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 0
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 2
 --- !u!1001 &185573309
 Prefab:
   m_ObjectHideFlags: 0
@@ -1900,6 +1879,26 @@ Prefab:
       propertyPath: InitialModule.startRotation.scalar
       value: 6.2832
       objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: aab91c2533db9444db5df8174d51fc3a, type: 2}
   m_IsPrefabParent: 0
@@ -2201,11 +2200,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 592.12756
   atlasSize: 512
-  lockAtlasSize: 0
-  objectID: 3
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 6
 --- !u!1 &245695768
 GameObject:
   m_ObjectHideFlags: 0
@@ -2678,11 +2674,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 26337.75
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 0
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 3
 --- !u!1 &295509688
 GameObject:
   m_ObjectHideFlags: 0
@@ -2894,11 +2887,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 113477.44
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 0
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 3
 --- !u!1 &320286476
 GameObject:
   m_ObjectHideFlags: 0
@@ -2944,11 +2934,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 2200.8918
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 4
 --- !u!1001 &341073369
 Prefab:
   m_ObjectHideFlags: 0
@@ -3538,6 +3525,26 @@ Prefab:
       propertyPath: InitialModule.startRotation.scalar
       value: 6.2832
       objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: aab91c2533db9444db5df8174d51fc3a, type: 2}
   m_IsPrefabParent: 0
@@ -3628,11 +3635,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 61519.094
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 4
 --- !u!1001 &363057397
 Prefab:
   m_ObjectHideFlags: 0
@@ -3811,11 +3815,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 47
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &371125653
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3827,11 +3828,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 48
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &371125654
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3843,11 +3841,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 49
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &371125655
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3859,11 +3854,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 50
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1001 &378370108
 Prefab:
   m_ObjectHideFlags: 0
@@ -3942,11 +3934,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 71547.79
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 28
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &382321789
 GameObject:
   m_ObjectHideFlags: 0
@@ -4027,11 +4016,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 93.4886
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 9
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 7
 --- !u!1 &392225515
 GameObject:
   m_ObjectHideFlags: 0
@@ -4556,11 +4542,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 13893.545
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 11
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1001 &493236240
 Prefab:
   m_ObjectHideFlags: 0
@@ -4643,11 +4626,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3688.9087
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 7
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 2
 --- !u!1 &557664554
 GameObject:
   m_ObjectHideFlags: 0
@@ -5164,11 +5144,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 32258.584
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 5
 --- !u!1 &613190199
 GameObject:
   m_ObjectHideFlags: 0
@@ -5496,11 +5473,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 122.42436
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 8
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1001 &725659040
 Prefab:
   m_ObjectHideFlags: 0
@@ -5620,6 +5594,16 @@ Prefab:
         type: 2}
       propertyPath: ShapeModule.radiusThickness
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000010256132560, guid: 54666f5c40fca714cbc9af15d2d8bfa2,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000010256132560, guid: 54666f5c40fca714cbc9af15d2d8bfa2,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
       objectReference: {fileID: 0}
     - target: {fileID: 198000010256132560, guid: 54666f5c40fca714cbc9af15d2d8bfa2,
         type: 2}
@@ -6039,11 +6023,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 5939.8633
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 7
 --- !u!1 &808069412
 GameObject:
   m_ObjectHideFlags: 0
@@ -6255,11 +6236,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 4938.3887
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 4
 --- !u!1001 &824301846
 Prefab:
   m_ObjectHideFlags: 0
@@ -6779,11 +6757,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 68153.84
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 5
 --- !u!1 &870723818
 GameObject:
   m_ObjectHideFlags: 0
@@ -6991,11 +6966,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3401.661
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 3
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1 &892270858 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100000, guid: 45fe5884974f1844b93ced4feab5fb4c, type: 3}
@@ -7011,11 +6983,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 237.89577
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 5
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1001 &904370118
 Prefab:
   m_ObjectHideFlags: 0
@@ -7162,11 +7131,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 2205.7512
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 16
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 5
 --- !u!1001 &912353986
 Prefab:
   m_ObjectHideFlags: 0
@@ -7290,11 +7256,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 60
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &932003868 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100000, guid: 6774e18c568ff124f997ae862a6b2a3f, type: 3}
@@ -7310,11 +7273,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 110768.13
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 15
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &949192295
 GameObject:
   m_ObjectHideFlags: 0
@@ -7571,11 +7531,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 14119.252
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 3
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 4
 --- !u!1001 &971134553
 Prefab:
   m_ObjectHideFlags: 0
@@ -7840,11 +7797,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3422.0024
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 11
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1001 &972851700
 Prefab:
   m_ObjectHideFlags: 0
@@ -8527,11 +8481,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 6532.6504
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 10
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1001 &1016185153
 Prefab:
   m_ObjectHideFlags: 0
@@ -9372,6 +9323,26 @@ Prefab:
       propertyPath: InitialModule.startRotation.scalar
       value: 6.2832
       objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: aab91c2533db9444db5df8174d51fc3a, type: 2}
   m_IsPrefabParent: 0
@@ -9454,11 +9425,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 74.53221
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 20
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 15
 --- !u!1 &1069376938
 GameObject:
   m_ObjectHideFlags: 0
@@ -9796,11 +9764,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 84.763725
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 21
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 16
 --- !u!1 &1090626427
 GameObject:
   m_ObjectHideFlags: 0
@@ -9972,11 +9937,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 19306.422
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 2
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 6
 --- !u!1 &1098642164
 GameObject:
   m_ObjectHideFlags: 0
@@ -10057,11 +10019,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 4793.841
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 18
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &1102529381
 GameObject:
   m_ObjectHideFlags: 0
@@ -10274,11 +10233,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 6771.41
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 14
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 7
 --- !u!1 &1142497162
 GameObject:
   m_ObjectHideFlags: 0
@@ -10554,11 +10510,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 55637.64
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 3
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 8
 --- !u!1 &1164219153
 GameObject:
   m_ObjectHideFlags: 0
@@ -10706,11 +10659,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 385691.25
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 8
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1001 &1168595037
 Prefab:
   m_ObjectHideFlags: 0
@@ -10797,11 +10747,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 5758.096
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 9
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 11
 --- !u!1 &1172643425
 GameObject:
   m_ObjectHideFlags: 0
@@ -11596,7 +11543,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: -1
+  m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3
@@ -12109,11 +12056,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 5857.804
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 13
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 10
 --- !u!1 &1391323826 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100000, guid: 8917d1784638ad444884a16bc8603b26, type: 3}
@@ -12129,11 +12073,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 547.8298
   atlasSize: 512
-  lockAtlasSize: 0
-  objectID: 8
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 15
 --- !u!1001 &1393272304
 Prefab:
   m_ObjectHideFlags: 0
@@ -12597,11 +12538,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 571989.56
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 9
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 13
 --- !u!1 &1435588807
 GameObject:
   m_ObjectHideFlags: 0
@@ -12813,11 +12751,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 79340.87
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 4
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 8
 --- !u!1 &1440673709 stripped
 GameObject:
   m_PrefabParentObject: {fileID: 100000, guid: 363688fc7fd4a24499df872de4e80c6b, type: 3}
@@ -12985,11 +12920,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 171.35771
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 9
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 18
 --- !u!1 &1495932180
 GameObject:
   m_ObjectHideFlags: 0
@@ -13135,11 +13067,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 201.68898
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 9
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 19
 --- !u!1001 &1507662432
 Prefab:
   m_ObjectHideFlags: 0
@@ -13222,11 +13151,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3648.9324
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 3
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1001 &1535344363
 Prefab:
   m_ObjectHideFlags: 0
@@ -13436,11 +13362,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 1273521.9
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 16
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1001 &1554524294
 Prefab:
   m_ObjectHideFlags: 0
@@ -13643,11 +13566,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 96836.65
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 11
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &1591124277
 GameObject:
   m_ObjectHideFlags: 0
@@ -14549,11 +14469,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 59
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &1733239506
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14565,11 +14482,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 58
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &1733239507
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14581,11 +14495,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 57
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &1733239508
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14597,11 +14508,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 0
   atlasSize: 16
-  lockAtlasSize: 0
   objectID: 56
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1001 &1748606584
 Prefab:
   m_ObjectHideFlags: 0
@@ -14847,11 +14755,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 2640.0015
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 3
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 10
 --- !u!1 &1752982710
 GameObject:
   m_ObjectHideFlags: 0
@@ -14988,11 +14893,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 36.898277
   atlasSize: 128
-  lockAtlasSize: 0
-  objectID: 10
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 22
 --- !u!1001 &1770644300
 Prefab:
   m_ObjectHideFlags: 0
@@ -15139,11 +15041,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 5471.5464
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 21
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 15
 --- !u!1 &1821690448
 GameObject:
   m_ObjectHideFlags: 0
@@ -16236,11 +16135,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 2302.386
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 37
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 10
 --- !u!1 &1885836482
 GameObject:
   m_ObjectHideFlags: 0
@@ -16345,11 +16241,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 10545.826
   atlasSize: 1024
-  lockAtlasSize: 0
   objectID: 6
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &1926290569
 GameObject:
   m_ObjectHideFlags: 0
@@ -16569,11 +16462,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 6229.846
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 28
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 15
 --- !u!1001 &1938230517
 Prefab:
   m_ObjectHideFlags: 0
@@ -16834,11 +16724,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 18680.988
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 4
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 7
 --- !u!1 &1959230604
 GameObject:
   m_ObjectHideFlags: 0
@@ -17111,11 +16998,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 136419.33
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 4
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 9
 --- !u!1 &1966081311
 GameObject:
   m_ObjectHideFlags: 0
@@ -17593,11 +17477,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 20725.004
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 5
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 8
 --- !u!1 &2011700636
 GameObject:
   m_ObjectHideFlags: 0
@@ -18063,11 +17944,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3418.388
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 30
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 18
 --- !u!1001 &2044004817
 Prefab:
   m_ObjectHideFlags: 0
@@ -18210,11 +18088,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 29572.549
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 11
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 16
 --- !u!1001 &2045408298
 Prefab:
   m_ObjectHideFlags: 0
@@ -18804,6 +18679,26 @@ Prefab:
       propertyPath: InitialModule.startRotation.scalar
       value: 6.2832
       objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1.0000
+      objectReference: {fileID: 0}
+    - target: {fileID: 198000013136172326, guid: aab91c2533db9444db5df8174d51fc3a,
+        type: 2}
+      propertyPath: InitialModule.startRotation.scalar
+      value: 6.2832
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: aab91c2533db9444db5df8174d51fc3a, type: 2}
   m_IsPrefabParent: 0
@@ -19010,11 +18905,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 838.44196
   atlasSize: 512
-  lockAtlasSize: 0
   objectID: 1
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &2066708328
 GameObject:
   m_ObjectHideFlags: 0
@@ -19280,11 +19172,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 10788.57
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 23
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 15
 --- !u!1 &2074325722
 GameObject:
   m_ObjectHideFlags: 0
@@ -19590,11 +19479,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 3403.0562
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 7
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 19
 --- !u!1001 &2112841872
 Prefab:
   m_ObjectHideFlags: 0
@@ -19745,11 +19631,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 33724.59
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 22
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 15
 --- !u!1001 &2131011614
 Prefab:
   m_ObjectHideFlags: 0
@@ -19904,11 +19787,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edf0ceffdaf09c74c84a479de61a5c67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  screenArea: 12684.232
   atlasSize: 1024
-  lockAtlasSize: 0
-  objectID: 23
-  atlasRect: {x: 0, y: 0, z: 0, w: 0}
+  objectID: 17
 --- !u!1 &2132459154
 GameObject:
   m_ObjectHideFlags: 0

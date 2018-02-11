@@ -12,11 +12,13 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     ComputeBuffer objectID_b, prev_objectID_b;
     uint[] objectID_b_data = new uint[1];
     uint[] prev_objectID_b_data = new uint[1];
-    // Update is called once per frame
-    void Update()
-    {
 
+    private int triangleCountOfMesh;
+    // Update is called once per frame
+    void Start()
+    {
         meshRenderer = GetComponent<MeshRenderer>();
+        triangleCountOfMesh = GetComponent<MeshFilter>().sharedMesh.triangles.Length / 3;
     }
 
     private void OnWillRenderObject()
@@ -48,7 +50,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 
     }
 
-    public void SetAtlasProperties(int objectID)
+    public void SetAtlasProperties(int objectID, out int triangleCount)
     {
         MaterialPropertyBlock matProbBlock = new MaterialPropertyBlock();
 
@@ -65,7 +67,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
             meshRenderer.SetPropertyBlock(matProbBlock);
         }
 
-
+        triangleCount = triangleCountOfMesh;
     }
 
     Vector4 getBoundingSphere()

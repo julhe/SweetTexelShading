@@ -9,26 +9,36 @@ uint g_totalObjectsInView;
 // TODO: can be done with a simple reference swap?!
 // -----------------------------------------------------------------------------
 
+//uint g_objectTriangleOffset[];
+RWStructuredBuffer<uint> g_PrimitiveMipMapLevel; //how large is the triangle?
+RWStructuredBuffer<uint> g_PrimitiveLocation; //where is the triangle in the atlas located?
+RWStructuredBuffer<uint> g_PrimitiveVisibility; //is the triangle visiblie in the view?
+
+StructuredBuffer<uint> g_PrimitiveMipMapLevelRO; //how large is the triangle?
+StructuredBuffer<uint> g_PrimitveLocationRO; //where is the triangle in the atlas located?
+StructuredBuffer<uint> g_PrimitiveVisibilityRO; //is the triangle visiblie in the view?
 #pragma kernel CopyDataToPreFrameBuffer
-RWStructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
-RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
+//RWStructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
+//RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
 
 [numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
 void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	int index = groupIndex;
-	g_prev_ObjectToAtlasProperties[index] = g_ObjectToAtlasProperties[index];
+    g_PrimitiveMipMapLevel[index] = 0;
 
-	g_ObjectToAtlasProperties[index].objectID = index; // reset object ID
-	g_ObjectToAtlasProperties[index].sizeExponent = 0; //reset the mipmap level, otherwise the max() function for detecting the highest mipmap level would fail overtime
-	g_ObjectToAtlasProperties[index].atlas_ST = 0;
+	//g_prev_ObjectToAtlasProperties[index] = g_ObjectToAtlasProperties[index];
+
+	//g_ObjectToAtlasProperties[index].objectID = index; // reset object ID
+	//g_ObjectToAtlasProperties[index].sizeExponent = 0; //reset the mipmap level, otherwise the max() function for detecting the highest mipmap level would fail overtime
+	//g_ObjectToAtlasProperties[index].atlas_ST = 0;
 }
 
 // reads the VisibilityBuffer and extracts the visible triangles
 // -----------------------------------------------------------------------------
 #pragma kernel ExtractCoverage
 Texture2D<uint> g_VisibilityBuffer;
-RWBuffer<uint> g_PrimitiveVisibility;
+
 
 uint2 g_VisibilityBuffer_pixelCount;
 groupshared uint shared_Object_MipmapLevel[MAXIMAL_OBJECTS_PER_VIEW];
@@ -37,9 +47,12 @@ AppendStructuredBuffer<uint> g_ObjectMipMap_append;
 void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	// initalize shared_Object_MipmapLevel
-	for (int i = 0; i < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); i++)
+    for (
+        int i = groupIndex; 
+        i < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); 
+        i += COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE)
 	{
-		shared_Object_MipmapLevel[groupIndex + i * COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE] = 0;
+		shared_Object_MipmapLevel[i] = 0;
 	}	
 	AllMemoryBarrierWithGroupSync();
 
@@ -55,16 +68,21 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 		/*out*/ primitiveID,
 		/*out*/ mipmapLevel);
 
-	if (objectID != 0) // 0 means "undefined"
+    if (objectID != 0) // 0 means "undefined"
 	{
 		// obtain highest mipmap level of object per thread group
-		InterlockedMax(shared_Object_MipmapLevel[objectID], mipmapLevel);
+		//InterlockedMax(shared_Object_MipmapLevel[objectID], mipmapLevel);
 
 		// "unlock" the triangle for the texel space pass 
 		uint baseIndex, subIndex;
 		GetVisiblityIDIndicies(objectID, primitiveID, /*out*/ baseIndex, /*out*/ subIndex);
 		g_PrimitiveVisibility[baseIndex] = 1;
-	}
+
+        mipmapLevel = min(ATLAS_OBJECT_SIZEEXPONENT_MAX, mipmapLevel);
+        mipmapLevel = max(ATLAS_OBJECT_SIZEEXPONENT_MIN, mipmapLevel);
+        g_PrimitiveMipMapLevel[baseIndex] = mipmapLevel;
+
+    }
 
 	AllMemoryBarrierWithGroupSync();
 	for (int j = 0; j < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); j++)
@@ -73,8 +91,8 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 		if (shared_Object_MipmapLevel[index] != 0)
 		{
 			// pass highest mipmap level per thread gorup to append buffer for futher processing
-			uint packedValue = EncodeVisibilityBuffer(index, 0, shared_Object_MipmapLevel[index]);
-			g_ObjectMipMap_append.Append(packedValue);
+			//uint packedValue = EncodeVisibilityBuffer(index, primitiveID, shared_Object_MipmapLevel[index]);
+			//g_ObjectMipMap_append.Append(packedValue);
 		}
 	}
 
@@ -104,9 +122,9 @@ void MipMapMeltDown(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIn
 	InterlockedMax(shared_Object_MipmapLevel[objectID], mipmapLevel);
 
 	// store data
-	for (int i = 0; i < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); i++)
+	for (int j = 0; j < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); j++)
 	{
-		int index = i + groupIndex * COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE;
+		int index = j + groupIndex * COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE;
 		g_ObjectMipMap_append.Append(shared_Object_MipmapLevel[index]);
 	}
 }
@@ -143,7 +161,7 @@ void MipMapFinalize(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIn
 	for (int k = 0; k < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); k++)
 	{
 		int index = groupIndex + k * COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE;
-		g_ObjectToAtlasProperties[index].sizeExponent = (shared_Object_MipmapLevel[index]);
+		//g_ObjectToAtlasProperties[index].sizeExponent = (shared_Object_MipmapLevel[index]);
 	}
 }
 
@@ -181,7 +199,7 @@ void DebugShowVertexID (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Gro
 			output = half4(sin(f), sin(f / 63.0), sin(f / 511.0), 0) * 0.5 + 0.5;
 			break;
 		case 3:
-			float mipmap_f = g_ObjectToAtlasPropertiesR[objectID].sizeExponent / 13.0;
+            float mipmap_f = g_PrimitiveMipMapLevel[baseIndex] / 13.0;
 			output = mipmap_f;
 			break;
 		case 4:
@@ -196,66 +214,47 @@ void DebugShowVertexID (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Gro
 // packs texel atlas
 // -----------------------------------------------------------------------------
 
-// julian: I use the morton-code / z-shape for atlas packing
-// this makes the packing very much straight forward and the complexity for insertion is always O(1).
-// But this only works, as long as the textures sizes are power-of-two (256, 512, 1024,...) and the largest textures are getting inserted first
-uint2 GetTilePosition(uint index)
-{
-    return uint2(DecodeMorton2X(index), DecodeMorton2Y(index));
-}
-
-float4 GetTextureRect(uint index, uint tilesPerAxis)
-{
-	float2 atlasPosition_tileSpace = GetTilePosition(index);
-    float2 min = atlasPosition_tileSpace * ATLAS_TILE_SIZE;
-    float2 max = min + tilesPerAxis * ATLAS_TILE_SIZE;
-
-	return float4(min, max);
-}
-
-float4 GetUVToAtlasScaleOffset(float4 atlasPixelSpace)
-{
-    return float4(atlasPixelSpace.zw - atlasPixelSpace.xy, atlasPixelSpace.xy);
-}
 
 #pragma kernel AtlasPacking
 
-uint g_atlasAxisSize;
-uint gshared_atlasIndex;
-[numthreads(1,1,1)] 
+groupshared uint shared_atlasIndex;
+uint g_totalTriangles;
+[numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
 void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	if (groupIndex == 0)
 	{
-		gshared_atlasIndex = 0;
-	}
+        shared_atlasIndex = 0;
+    }
 	AllMemoryBarrierWithGroupSync();
 
-	for (uint j = 15 ; 7 <= j; j--)
-	{
-		for (uint i = 1; i < g_totalObjectsInView; i++)
-		{
+    for (uint j = ATLAS_OBJECT_SIZEEXPONENT_MAX; ATLAS_OBJECT_SIZEEXPONENT_MIN <= j; j--)
+    {
+        for (uint i = groupIndex + MAX_PRIMITIVES_PER_OBJECT; i < g_totalTriangles + MAX_PRIMITIVES_PER_OBJECT; i += SINGLE_ROW_THREAD_SIZE)
+        {
+            if (g_PrimitiveVisibility[i] == 0)
+                continue;
 
 			// TODO: can't use clamp() somehow...
+			// TODO: do this in PS or somewhere earlier?
 			// clamp atlasExponent to [ATLAS_OBJECT_SIZEEXPONENT_MIN, ATLAS_OBJECT_SIZEEXPONENT_MAX]
-			uint objectTileAxisExponent = g_ObjectToAtlasProperties[i].sizeExponent;
-			objectTileAxisExponent = min(ATLAS_OBJECT_SIZEEXPONENT_MAX, objectTileAxisExponent);
-			objectTileAxisExponent = max(ATLAS_OBJECT_SIZEEXPONENT_MIN, objectTileAxisExponent);
+            uint primitiveMipMapLevel = g_PrimitiveMipMapLevel[i];
+            //primitiveMipMapLevel = min(ATLAS_OBJECT_SIZEEXPONENT_MAX, primitiveMipMapLevel);
+            //primitiveMipMapLevel = max(ATLAS_OBJECT_SIZEEXPONENT_MIN, primitiveMipMapLevel);
+			
+            if (primitiveMipMapLevel == j)
+            {
+				// calculate triangle size in atlas units
+                uint primitiveTexelAxisLength = pow(2, primitiveMipMapLevel);
 
-			if (objectTileAxisExponent == j)
-			{
-				// calculate object size in atlas units
-				uint objectTilesAxis = pow(2, objectTileAxisExponent) / ATLAS_TILE_SIZE;
-
-				uint objectTilesTotal = objectTilesAxis * objectTilesAxis;
+                uint primitiveTexelArea = primitiveTexelAxisLength * primitiveTexelAxisLength;
 		
-				float4 atlasRect = GetTextureRect(gshared_atlasIndex, objectTilesAxis);
-				g_ObjectToAtlasProperties[i].atlas_ST = GetUVToAtlasScaleOffset(atlasRect) / (float)g_atlasAxisSize;
-
-				gshared_atlasIndex += objectTilesTotal;
-			}
-		}
-	}
+				//float4 atlasRect = GetTextureRect(gshared_atlasIndex, objectTilesAxis);
+				//g_ObjectToAtlasProperties[i].atlas_ST = GetUVToAtlasScaleOffset(atlasRect) / (float)g_atlasAxisSize;
+                InterlockedAdd(shared_atlasIndex, primitiveTexelArea, g_PrimitiveLocation[i]); //TODO: should be possible w/o atomics
+            }
+        }
+    }
 }
 
 
