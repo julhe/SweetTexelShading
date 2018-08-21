@@ -13,11 +13,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   resolveShader: {fileID: 7200000, guid: c95f3716fba8afd4cbff02f3e8708ae5, type: 3}
   resolveBlitShader: {fileID: 4800000, guid: 000b29ff010ae334eb6223baf6829c8f, type: 3}
-  maximalAtlasSizeExponent: 11
-  atlasResolutionScale: 12000
-  visibilityPassDownscale: 1
-  atlasRefreshFps: 1
+  maximalAtlasSizeExponent: 12
+  atlasResolutionScale: 8192
+  visibilityPassDownscale: 2
+  atlasRefreshFps: 20.28
   MSSALevel: 1
   clearAtlasOnRefresh: 0
   debugPass: 0
-  memoryConsumption: 32
+  memoryConsumption: 128

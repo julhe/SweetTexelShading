@@ -78,12 +78,16 @@ Shader "Compact Deferred"
 				return o;
 			}
 	
-
-			sampler2D _MainTex, _BumpMap, _SpecGlossMap, _EmissionMap;
+			float4x4 cam_worldToView, cam_viewToWorld;
+			sampler2D _MainTex, _BumpMap, _SpecGlossMap, _EmissionMap, _OcclusionMap;
 			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
 			float _Smoothness;
 			float3 _EmissionColor;
-			uint4 frag(v2f i, uint primID : SV_PrimitiveID) : SV_Target
+			struct f2r
+			{
+				uint4 gbuffer : SV_Target0;
+			};
+			f2r frag(v2f i, uint primID : SV_PrimitiveID)
 			{
 				float3 albedo = tex2D(_MainTex, i.pack0);
 				albedo = sqrt(albedo);
@@ -95,12 +99,30 @@ Shader "Compact Deferred"
 				worldNormal.y = dot(i.tSpace1, tnormal);
 				worldNormal.z = dot(i.tSpace2, tnormal);
 
+				// transform worldNormal to viewspace
+				// doubles the precision in comparision to worldspace
+				float3 viewSpaceNormal = mul(cam_worldToView, worldNormal);
+
+				viewSpaceNormal = normalize(viewSpaceNormal);
+
 				float4 specGloss = tex2D(_SpecGlossMap, i.pack0);
 				float Smoothness = specGloss.a * _Smoothness;
-
+				float occlusion = tex2D(_OcclusionMap, i.pack0);
 				float3 Emission = tex2D(_EmissionMap, i.pack0) * _EmissionColor;
 
-				return EncodeVisibilityBuffer(i.vertex.xy, albedo,  worldNormal, dot(specGloss.rgb, unity_ColorSpaceDielectricSpec), Smoothness);
+				uint2 pixelPos = uint2(i.vertex.xy );
+				bool checkerboard = isSampleA(pixelPos);
+
+				f2r output;
+				output.gbuffer = EncodeVisibilityBuffer(
+					i.vertex.xy,
+					checkerboard,
+					albedo, 
+					worldNormal, 
+					specGloss.rgb, 
+					Smoothness,
+					occlusion);
+				return output;
 			}
 			ENDCG
 		}
@@ -408,7 +430,7 @@ Shader "Compact Deferred"
 					gi);
 
 				outColor += s.Emission;
-				return float4(outColor, 1);
+				return float4(s.Albedo, 1);
 			}
 			ENDCG
 		}

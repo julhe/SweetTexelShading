@@ -7,7 +7,7 @@ Material:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_Name: HallwayElevatorDoorWhite
-  m_Shader: {fileID: 4800000, guid: 7f27f82cf9f984543bc6b6e423fd8164, type: 3}
+  m_Shader: {fileID: 4800000, guid: 745354eac74d32e40a508c37b061878a, type: 3}
   m_ShaderKeywords: _EMISSION _LIGHTMAPPING_DYNAMIC_LIGHTMAPS _NORMALMAP _SPECGLOSSMAP
     _UVSEC_UV1
   m_LightmapFlags: 0

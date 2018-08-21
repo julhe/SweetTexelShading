@@ -3,7 +3,7 @@
 	Properties
 	{
 		_MainTex ("Texture", 2D) = "white" {}
-		g_PosBuffer("Pos", 2D) = "black" {}
+		//g_PosBuffer("Pos", 2D) = "black" {}
 	}
 	SubShader
 	{
@@ -46,41 +46,65 @@
 			}
 			
 			Texture2D<uint4> _MainTex;
+			float4x4 camera_clipToWorld, cam_viewToWorld;
 			sampler2D g_PosBuffer;
-			UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
+			//samplerCUBE unity_SpecCube0;
+			UNITY_DECLARE_DEPTH_TEXTURE(g_Depth);
 			float4 globalTest;
 			float4 frag (v2f i) : SV_Target
 			{
 				uint2 pixelPos = uint2(i.uv * _ScreenParams.xy);
-				uint4 input = _MainTex[pixelPos];// (sampler_MainTex, i.uv);
+				bool sampA = isSampleA(pixelPos);
+				uint input = _MainTex[pixelPos];
+				uint inputB = _MainTex[pixelPos + uint2(1,0)];
 				float3 albedo;
-				float3 normal, emission;
-				float smoothness, metallic;
-				DecodeVisibilityBuffer(input.x, /*out*/ albedo, /*out*/ normal, /*out*/ metallic, /*out*/ smoothness);
-	
+				float3 normal, emission, specular;
+				float smoothness, occlusion;
+				DecodeVisibilityBuffer(
+					input,
+					inputB,
+					sampA,
+					/*out*/ albedo, 
+					/*out*/ normal, 
+					/*out*/ specular, 
+					/*out*/ smoothness,
+					/*out*/ occlusion);
+
+				//float3 normalWS = mul(cam_viewToWorld, float4(normal, 0));
+				//normalWS = normalize(normalWS);
 				// this is unity's regular standard shader
 
-				SurfaceOutputStandard s = (SurfaceOutputStandard)0;
+				SurfaceOutputStandardSpecular s = (SurfaceOutputStandardSpecular)0;
 				s.Albedo = albedo;
 				// sample the normal map, and decode from the Unity encoding
 				// transform normal from tangent to world space
 
 				s.Normal = normal;
-				float4 specGloss = 0.67;// tex2D(_SpecGlossMap, i.pack0);
 				s.Smoothness = smoothness;
-				s.Metallic = metallic;
-				s.Occlusion = 1;// tex2D(_OcclusionMap, i.pack0);
+				s.Specular = specular;
+				s.Occlusion = occlusion;// tex2D(_OcclusionMap, i.pack0);
 				s.Emission = 0;// tex2D(_EmissionMap, i.pack0) * _EmissionColor;
 				//
 
-				float3 worldPos = tex2D(g_PosBuffer, i.uv).rgb;// float3(i.tSpace0.w, i.tSpace1.w, i.tSpace2.w);
+				float depth = SAMPLE_DEPTH_TEXTURE(g_Depth, i.uv);
+				
+				float2 viewportPos = i.uv * 2.0 - 1.0;
+				float4 worldPos = mul(camera_clipToWorld, float4(viewportPos.x, viewportPos.y, depth, 1));// float3(i.tSpace0.w, i.tSpace1.w, i.tSpace2.w);
+				worldPos.xyz /= worldPos.w;
+
+				float3 ddxWorldPos = ddx(worldPos.xyz);
+				float3 ddyWorldPos = ddy(worldPos.xyz);
+
+				float3 analyticNormal = -normalize(cross(ddxWorldPos, ddyWorldPos));
+
+				//s.Normal = analyticNormal;
 #ifndef USING_DIRECTIONAL_LIGHT
 				fixed3 lightDir = normalize(UnityWorldSpaceLightDir(worldPos));
 #else
 				fixed3 lightDir = _WorldSpaceLightPos0.xyz;
 #endif
-				fixed3 worldViewDir = normalize(float3(0, 1, 1)); //normalize(UnityWorldSpaceViewDir(worldPos));
-				lightDir = normalize(float3(1, 1, 1));
+				fixed3 worldViewDir = normalize(UnityWorldSpaceViewDir(worldPos));
+			
 				// compute lighting & shadowing factor
 				UNITY_LIGHT_ATTENUATION(atten, i, worldPos)
 
@@ -89,7 +113,7 @@
 				UNITY_INITIALIZE_OUTPUT(UnityGI, gi);
 				gi.indirect.diffuse = 0;
 				gi.indirect.specular = 0;
-				gi.light.color = 1;// _LightColor0.rgb;
+				gi.light.color = _LightColor0.rgb;
 				gi.light.dir = lightDir;
 				// Call GI (lightmaps/SH/reflections) lighting function
 				UnityGIInput giInput;
@@ -120,16 +144,26 @@
 				giInput.boxMin[1] = unity_SpecCube1_BoxMin;
 				giInput.probePosition[1] = unity_SpecCube1_ProbePosition;
 #endif
-				//LightingStandardSpecular_GI(s, giInput, gi);
-				float3 outColor = LightingStandard(
+				//Unity_GlossyEnvironmentData g = UnityGlossyEnvironmentSetup(s.Smoothness, worldViewDir, s.Normal, s.Specular);
+
+				float3 reflectionDir = reflect(s.Normal, worldViewDir);
+				half perceptualRoughness = 1.0 - (s.Smoothness * s.Smoothness);
+				perceptualRoughness = perceptualRoughness * (1.7 - 0.7*perceptualRoughness);
+				half mip = perceptualRoughnessToMipmapLevel(perceptualRoughness);
+				half3 env = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionDir, perceptualRoughness);
+				env *= occlusion * specular;
+				LightingStandardSpecular_GI(s, giInput, gi);
+				float3 outColor = LightingStandardSpecular(
 					s,
 					worldViewDir,
 					gi);
 
-				//outColor +=  s.Emission;
-				//float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv);
-				float3 lit = dot(normal, lightDir);
-				return float4(abs(outColor), 1);
+				//outColor += env * s.Occlusion * 0.67;
+
+				//return sampA;
+				//outColor = 
+				float3 lit = depth > 0;//dot(normal, lightDir);
+				return float4((env), 1);
 			}
 			ENDCG
 		}

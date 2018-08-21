@@ -15,8 +15,12 @@ float g_AtlasSizeExponent;
 sampler2D g_Dither;
 float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
 {
+	return 0;
+#if 0
+	return (tex2D(g_Dither, vScreenPos / 32.0) - 0.5 )/ targetRange;
+#else
 	// Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR
-	//float3 vDither = float3( dot( float2( 171.0, 231.0 ), vScreenPos.xy + iTime ) );
+//float3 vDither = float3( dot( float2( 171.0, 231.0 ), vScreenPos.xy + iTime ) );
 	float3 vDither = (dot(float2(171.0, 231.0), vScreenPos.xy + _Time.y));
 	vDither.rgb = frac(vDither.rgb / float3(103.0, 71.0, 97.0));
 	return vDither.rgb / targetRange; //note: looks better without 0.375...
@@ -24,8 +28,35 @@ float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
 									  //note: not sure why the 0.5-offset is there...
 									  //vDither.rgb = fract( vDither.rgb / float3( 103.0, 71.0, 97.0 ) ) - float3( 0.5, 0.5, 0.5 );
 									  //return (vDither.rgb / 255.0) * 0.375;
+#endif
+
 }
 
+// https://software.intel.com/en-us/node/503873
+float3 RGB_YCoCg(float3 c)
+{
+	// Y = R/4 + G/2 + B/4
+	// Co = R/2 - B/2
+	// Cg = -R/4 + G/2 - B/4
+	return float3(
+		c.x / 4.0 + c.y / 2.0 + c.z / 4.0,
+		c.x / 2.0 - c.z / 2.0,
+		-c.x / 4.0 + c.y / 2.0 - c.z / 4.0
+		);
+}
+
+// https://software.intel.com/en-us/node/503873
+float3 YCoCg_RGB(float3 c)
+{
+	// R = Y + Co - Cg
+	// G = Y + Cg
+	// B = Y - Co - Cg
+	return float3(
+		c.x + c.y - c.z,
+		c.x + c.z,
+		c.x - c.y - c.z
+		);
+}
 
 float3 ditherLottes(float3 color, float2 vScreenPos, float quantizationSteps)
 {
@@ -79,7 +110,7 @@ float FromUINT_3(uint value)
 
 uint ToUINT_4(float value)
 {
-	return value* 15.0 ;
+	return value * 15.0 ;
 }
 
 float FromUINT_4(uint value)
@@ -146,6 +177,22 @@ float3 oct_to_float32x3(float2 e) {
 }
 
 
+// Assume normalized input on +Z hemisphere.
+// Output is on [-1, 1].
+float2 float32x3_to_hemioct(in float3 v) {
+	// Project the hemisphere onto the hemi-octahedron,
+	// and then into the xy plane
+	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
+	// Rotate and scale the center diamond to the unit square
+	return float2(p.x + p.y, p.x - p.y);
+}
+float3 hemioct_to_float32x3(float2 e) {
+	// Rotate and scale the unit square back to the center diamond
+	float2 temp = float2(e.x + e.y, e.x - e.y) * 0.5;
+	float3 v = float3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+	return normalize(v);
+}
+
 float3 NeutralTonemapping(in float3 color)
 {
 	float luma = max(color.r, max(color.g, color.b));
@@ -158,43 +205,86 @@ float3 InverseNeutralTonemapping(in float3 color)
 	return color.rgb / (1 - luma);
 }
 
-
-uint EncodeVisibilityBuffer(float2 vertexPos, float3 albedo, float3 normal, float metallic, float smoothness)
+bool isSampleA(uint2 pixelPos)
 {
-	albedo = sqrt(albedo); // do gamma compression, increases resolution of darker values
-	albedo += ScreenSpaceDither(vertexPos, 16.0);
+	return step(0.5, ((pixelPos.x + pixelPos.y) * 0.5) % 1.0);
+}
 
+uint EncodeVisibilityBuffer(
+	float2 vertexPos, 
+	bool isSampleA,
+	float3 albedo, 
+	float3 normal, 
+	float3 specColor, 
+	float smoothness,
+	float occlusion )
+{
+	half3 dither4 = ScreenSpaceDither(vertexPos, 4.0); 
+	half3 dither8 = ScreenSpaceDither(vertexPos, 8.0);// 3
+	half3 dither16 = ScreenSpaceDither(vertexPos, 16.0);// 4
+	half3 dither32 = ScreenSpaceDither(vertexPos, 32.0);// 5
+	half3 dither64 = ScreenSpaceDither(vertexPos, 64.0);// 6
+	half3 dither128 = ScreenSpaceDither(vertexPos, 128.0);// 7
+	half3 dither256 = ScreenSpaceDither(vertexPos, 256.0);// 8
+	albedo = sqrt(albedo);// do gamma compression, increases resolution of darker values
+	//albedo = RGB_YCoCg(albedo); 
+	//albedo.gb += 0.5;
+//	albedo += dither16;
+//	normal = normal * 0.5 + 0.5;
 	normal.xy = float32x3_to_oct(normal) * 0.5 + 0.5;
-	normal += ScreenSpaceDither(vertexPos, 64.0);
+	normal += dither256;
+	specColor = sqrt(specColor);
+	specColor += dither16;
 
-	metallic += ScreenSpaceDither(vertexPos, 16.0);
-	smoothness += ScreenSpaceDither(vertexPos, 16.0);
+	//smoothness *= smoothness;
+	smoothness += dither16;
 
+	occlusion = sqrt(occlusion);
+	//occlusion += dither16;
+	
 	return
-		ToUINT_4(albedo.r) |
-		ToUINT_4(albedo.g) << 4 |
-		ToUINT_4(albedo.b) << 8 |
-		ToUINT_6(normal.x) << 12 |
-		ToUINT_6(normal.y) << 18 |
- 
-		ToUINT_4(metallic) << 24 |
-		ToUINT_4(smoothness) << 28;
+		ToUINT_4(isSampleA ? albedo.r : specColor.r) |
+		ToUINT_4(isSampleA ? albedo.g : albedo.b) << 4 |
+
+		ToUINT_8(normal.x) << 8 |
+		ToUINT_8(normal.y) << 16 |
+
+		ToUINT_4(isSampleA ? occlusion : smoothness) << 24 |
+		ToUINT_4(isSampleA ? specColor.g : specColor.b) << 28;
 }
 
 
-void DecodeVisibilityBuffer(uint encodedValue, out float3 albedo, out float3 normal, out float metallic, out float smoothness)
+//#define FROM_A(isSampleA, encoded)
+void DecodeVisibilityBuffer(
+	uint encodedValue,
+	uint encodedValueB, 
+	bool isSampleA,
+	out float3 albedo, 
+	out float3 normal, 
+	out float3 specular, 
+	out float smoothness, 
+	out float occlusion)
 {
-	albedo.r = FromUINT_4(encodedValue);
-	albedo.g = FromUINT_4(encodedValue >> 4);
-	albedo.b = FromUINT_4(encodedValue >> 8);
-	albedo = (albedo * albedo);
+	albedo.r = FromUINT_4((isSampleA ? encodedValue : encodedValueB));
+	albedo.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 4);
+	albedo.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 4);
+	albedo *= albedo;
+	//albedo.gb -= 0.47;
+	//albedo = YCoCg_RGB(albedo);
 
-	normal.x = FromUINT_6(encodedValue >> 12);
-	normal.y = FromUINT_6(encodedValue >> 18);
+	normal.x = FromUINT_8(encodedValue >> 8);
+	normal.y = FromUINT_8(encodedValue >> 16);
 	normal = oct_to_float32x3(normal.xy * 2.0 - 1.0);
 
-	metallic = FromUINT_4(encodedValue >> 24);
-	smoothness = FromUINT_4(encodedValue >> 28);
+	smoothness = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 24);
+	//smoothness = sqrt(smoothness);
+	occlusion = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 24);
+	occlusion *= occlusion;
+
+	specular.r = FromUINT_4((isSampleA ? encodedValueB : encodedValue));
+	specular.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 28);
+	specular.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 28);
+	specular *= specular;
 }
 
 struct ObjectToAtlasProperties

@@ -7,25 +7,18 @@ public class CompactDeferredAsset : RenderPipelineAsset
 {
     private static readonly string m_PipelineFolder = "Assets/CompactDeferred";
     private static readonly string m_AssetName = "CompactDeferred.asset";
-
+    private static readonly string m_noisePath = "CompactDeferred.asset";
     public ComputeShader resolveShader;
     public Shader resolveBlitShader;
-    [Range(3, 13)]
-    public int maximalAtlasSizeExponent;
-    public int maximalAtlasSizePixel
-    {
-        get { return Mathf.NextPowerOfTwo(Mathf.RoundToInt(Mathf.Pow(2f, maximalAtlasSizeExponent))); }
-    }
 
-    public float atlasResolutionScale = 1024f;
-    public float visibilityPassDownscale = 1f;
-    public float atlasRefreshFps = 30;
-    public bool clearAtlasOnRefresh = false;
+    [Range(0.5f, 2f)] public float RenderScale = 1f;
+
     public TexelSpaceDebugMode debugPass = TexelSpaceDebugMode.None;
-    public Texture2D dither;
     public float memoryConsumption;
+    public Texture2D[] dither;
     protected override IRenderPipeline InternalCreatePipeline()
     {
+        dither = Resources.LoadAll<Texture2D>("Noise16pxLDR");
         return new CompactDeferred(this);
     }
 
