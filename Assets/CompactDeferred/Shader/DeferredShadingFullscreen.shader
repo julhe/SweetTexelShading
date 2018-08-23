@@ -18,12 +18,16 @@
 			#pragma target 5.0
 			#pragma enable_d3d11_debug_symbols
 
-			#define UNITY_PASS_FORWARDBASE
+				#define UNITY_BRDF_PBS BRDF1_Unity_PBS
 			#include "UnityCG.cginc"
 			#include "TexelShading.cginc" 
 			#include "UnityPBSLighting.cginc"
 			#include "AutoLight.cginc"
 
+		//	#define UNITY_SHOULD_SAMPLE_SH
+
+		
+			#define UNITY_PASS_FORWARDBASE
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -55,8 +59,8 @@
 			{
 				uint2 pixelPos = uint2(i.uv * _ScreenParams.xy);
 				bool sampA = isSampleA(pixelPos);
-				uint input = _MainTex[pixelPos];
-				uint inputB = _MainTex[pixelPos + uint2(1,0)];
+				uint2 input = _MainTex[pixelPos];
+				uint2 inputB = _MainTex[pixelPos + uint2(1,0)];
 				float3 albedo;
 				float3 normal, emission, specular;
 				float smoothness, occlusion;
@@ -74,14 +78,11 @@
 				//normalWS = normalize(normalWS);
 				// this is unity's regular standard shader
 
-				SurfaceOutputStandardSpecular s = (SurfaceOutputStandardSpecular)0;
+				SurfaceOutputStandard s = (SurfaceOutputStandard)0;
 				s.Albedo = albedo;
-				// sample the normal map, and decode from the Unity encoding
-				// transform normal from tangent to world space
-
 				s.Normal = normal;
 				s.Smoothness = smoothness;
-				s.Specular = specular;
+				s.Metallic = 0;
 				s.Occlusion = occlusion;// tex2D(_OcclusionMap, i.pack0);
 				s.Emission = 0;// tex2D(_EmissionMap, i.pack0) * _EmissionColor;
 				//
@@ -111,7 +112,7 @@
 					// Setup lighting environment
 					UnityGI gi;
 				UNITY_INITIALIZE_OUTPUT(UnityGI, gi);
-				gi.indirect.diffuse = 0;
+				gi.indirect.diffuse = 0;// ShadeSH9(float4(s.Normal, 1));
 				gi.indirect.specular = 0;
 				gi.light.color = _LightColor0.rgb;
 				gi.light.dir = lightDir;
@@ -146,24 +147,20 @@
 #endif
 				//Unity_GlossyEnvironmentData g = UnityGlossyEnvironmentSetup(s.Smoothness, worldViewDir, s.Normal, s.Specular);
 
-				float3 reflectionDir = reflect(s.Normal, worldViewDir);
-				half perceptualRoughness = 1.0 - (s.Smoothness * s.Smoothness);
-				perceptualRoughness = perceptualRoughness * (1.7 - 0.7*perceptualRoughness);
-				half mip = perceptualRoughnessToMipmapLevel(perceptualRoughness);
-				half3 env = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionDir, perceptualRoughness);
-				env *= occlusion * specular;
-				LightingStandardSpecular_GI(s, giInput, gi);
-				float3 outColor = LightingStandardSpecular(
+				LightingStandard_GI(s, giInput, gi);
+				gi.indirect.diffuse = 0.33;
+				float3 outColor = LightingStandard(
 					s,
 					worldViewDir,
 					gi);
 
+			//	BRDF1_Unity_PBS(s.Albedo, s.Specular, )
 				//outColor += env * s.Occlusion * 0.67;
 
 				//return sampA;
 				//outColor = 
-				float3 lit = depth > 0;//dot(normal, lightDir);
-				return float4((env), 1);
+				float3 lit = dot(normal, lightDir);
+				return float4(outColor, 1);
 			}
 			ENDCG
 		}

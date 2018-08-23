@@ -44,7 +44,6 @@ public class CompactDeferred : RenderPipeline
         m_asset = asset;
         Shader.globalRenderPipeline = PIPELINE_NAME;
 
-        fullscreenMat = new Material(m_asset.resolveBlitShader);
 
         g_dummyRT = Shader.PropertyToID("g_dummyRT");
         //m_cs_ExtractVisibility = m_ResolveCS.FindKernel("ExtractCoverage");
@@ -83,7 +82,11 @@ public class CompactDeferred : RenderPipeline
     public override void Render(ScriptableRenderContext context, Camera[] cameras)
     {
         base.Render(context, cameras);
+        if (fullscreenMat == null)
+        {
+            fullscreenMat = new Material(m_asset.resolveBlitShader);
 
+        }
         m_asset.memoryConsumption = 0f;
 
         instance = this;
@@ -99,7 +102,6 @@ public class CompactDeferred : RenderPipeline
             ScriptableCullingParameters cullingParameters;
             if (!CullResults.GetCullingParameters(CURRENT_CAMERA, stereoEnabled, out cullingParameters))
                 continue;
-            ClearCameraTarget(Color.clear);
 #if UNITY_EDITOR
             // Emit scene view UI
             if (camera.cameraType == CameraType.SceneView)
@@ -115,24 +117,13 @@ public class CompactDeferred : RenderPipeline
             Shade();
         }
 
+        Debug.Log(cameras.Length);
 
         timeSinceLastRender += Time.deltaTime;
         frameCounter++;
         context.Submit();
       //  m_asset.memoryConsumption += g_VistaAtlas_A.width * g_VistaAtlas_A.height * (g_VistaAtlas_A.format == RenderTextureFormat.DefaultHDR ? 8 : 4) * 2;
      //   m_asset.memoryConsumption /= 1024 * 1024;
-    }
-
-    void ClearCameraTarget(Color color)
-    {
-        CommandBuffer cmd = CommandBufferPool.Get("ClearCameraTarget");
-        cmd.SetGlobalMatrix("cam_viewToWorld", CURRENT_CAMERA.cameraToWorldMatrix);
-        cmd.SetGlobalMatrix("cam_worldToView", CURRENT_CAMERA.worldToCameraMatrix);
-
-        cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
-        cmd.ClearRenderTarget(true, true, color);
-        m_context.ExecuteCommandBuffer(cmd);
-        CommandBufferPool.Release(cmd);
     }
 
     RenderTargetIdentifier[] gBuffer = new RenderTargetIdentifier[1];
@@ -142,10 +133,13 @@ public class CompactDeferred : RenderPipeline
         int screenX = CURRENT_CAMERA.pixelWidth;
         int screenY = CURRENT_CAMERA.pixelHeight;
         cmd.SetGlobalTexture("g_Dither", m_asset.dither[frameCounter % m_asset.dither.Length]);
-      
+        cmd.SetGlobalMatrix("cam_viewToWorld", CURRENT_CAMERA.cameraToWorldMatrix);
+        cmd.SetGlobalMatrix("cam_worldToView", CURRENT_CAMERA.worldToCameraMatrix);
+
+
         int renderScale_X = Mathf.RoundToInt(m_asset.RenderScale * screenX);
         int renderScale_Y = Mathf.RoundToInt(m_asset.RenderScale * screenY);
-        cmd.GetTemporaryRT(g_GBuffer, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.RInt);
+        cmd.GetTemporaryRT(g_GBuffer, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.RGInt);
         //cmd.GetTemporaryRT(g_PosBuffer, screenX, screenY, 0, FilterMode.Point, RenderTextureFormat.ARGBFloat);
         cmd.GetTemporaryRT(g_Depth, renderScale_X, renderScale_Y, 32, FilterMode.Point, RenderTextureFormat.Depth);
 
@@ -180,15 +174,32 @@ public class CompactDeferred : RenderPipeline
             if (mainLightValid)
             {
                 cmd.SetGlobalVector("_WorldSpaceLightPos0", -mainLight.light.transform.forward);
-                cmd.SetGlobalColor("_LightColor0", mainLight.light.color);
+                cmd.SetGlobalColor("_LightColor0", mainLight.light.color * mainLight.light.intensity);
             }
 
             cmd.SetGlobalTexture("unity_SpecCube0", RenderSettings.customReflection);
+            cmd.SetGlobalVector("unity_SpecCube0_HDR", Vector4.one);
+            cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
+
+            cmd.SetGlobalTexture("unity_SpecCube1", RenderSettings.customReflection);
+            cmd.SetGlobalVector("unity_SpecCube1_HDR", Vector4.one);
+            cmd.SetGlobalVector("unity_SpecCube1_ProbePosition", Vector4.zero);
+
+            var ambProbe = RenderSettings.ambientProbe;
+
+            cmd.SetGlobalVector("unity_SHAr", new Vector4(ambProbe[0, 0], ambProbe[0, 1], ambProbe[0, 2], ambProbe[0, 3]));
+            cmd.SetGlobalVector("unity_SHAg", new Vector4(ambProbe[1, 0], ambProbe[1, 1], ambProbe[1, 2], ambProbe[0, 3]));
+            cmd.SetGlobalVector("unity_SHAb", new Vector4(ambProbe[2, 0], ambProbe[2, 1], ambProbe[2, 2], ambProbe[0, 3]));
+            cmd.SetGlobalVector("unity_SHBr", new Vector4(ambProbe[0, 4], ambProbe[0, 5], ambProbe[0, 6], ambProbe[0, 7]));
+            cmd.SetGlobalVector("unity_SHBg", new Vector4(ambProbe[1, 4], ambProbe[1, 5], ambProbe[1, 6], ambProbe[1, 7]));
+            cmd.SetGlobalVector("unity_SHBb", new Vector4(ambProbe[2, 4], ambProbe[2, 5], ambProbe[2, 6], ambProbe[2, 7]));
+            cmd.SetGlobalVector("unity_SHC" , new Vector4(ambProbe[0, 8], ambProbe[1, 8], ambProbe[2, 8], 0f));
+
             if (m_CullResults.visibleReflectionProbes.Count > 0)
             {
      
-                cmd.SetGlobalVector("unity_SpecCube0_HDR", m_CullResults.visibleReflectionProbes[0].hdr);
-                cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
+              
+               // cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
                 
             //    cmd.SetGlobalTexture("unity_SpecCube0", m_CullResults.visibleReflectionProbes[0].texture);
             }
@@ -208,7 +219,6 @@ public class CompactDeferred : RenderPipeline
 
         // cmd.SetGlobalVector("_WorldSpaceCameraPos", CURRENT_CAMERA.transform.position);
 
-        //cmd.GetTemporaryRT(g_intermediate, SCREEN_X, SCREEN_Y, 0, FilterMode.Bilinear);
         cmd.Blit(g_BufferRT, BuiltinRenderTextureType.CameraTarget, fullscreenMat);
      //   cmd.ReleaseTemporaryRT(g_PosBuffer);
         cmd.ReleaseTemporaryRT(g_GBuffer);

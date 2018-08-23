@@ -15,13 +15,20 @@ float g_AtlasSizeExponent;
 sampler2D g_Dither;
 float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
 {
-	return 0;
+	//return 0;
 #if 0
-	return (tex2D(g_Dither, vScreenPos / 32.0) - 0.5 )/ targetRange;
+	float3 blueNoise = tex2D(g_Dither, vScreenPos / 32.0) * 2.0 - 1.0;
+	blueNoise /= targetRange;
+	return blueNoise;
+	//blueNoise = mad(blueNoise, 2.0f, -1.0f);
+	//blueNoise = sign(blueNoise)*(1.0f - sqrt(1.0f - abs(blueNoise)));
+	//blueNoise /= targetRange * 2;
+	//return blueNoise;
+
 #else
 	// Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR
 //float3 vDither = float3( dot( float2( 171.0, 231.0 ), vScreenPos.xy + iTime ) );
-	float3 vDither = (dot(float2(171.0, 231.0), vScreenPos.xy + _Time.y));
+	float3 vDither = (dot(float2(171.0, 231.0), vScreenPos.xy + _Time.y * 0));
 	vDither.rgb = frac(vDither.rgb / float3(103.0, 71.0, 97.0));
 	return vDither.rgb / targetRange; //note: looks better without 0.375...
 
@@ -226,31 +233,30 @@ uint EncodeVisibilityBuffer(
 	half3 dither64 = ScreenSpaceDither(vertexPos, 64.0);// 6
 	half3 dither128 = ScreenSpaceDither(vertexPos, 128.0);// 7
 	half3 dither256 = ScreenSpaceDither(vertexPos, 256.0);// 8
-	albedo = sqrt(albedo);// do gamma compression, increases resolution of darker values
-	//albedo = RGB_YCoCg(albedo); 
-	//albedo.gb += 0.5;
-//	albedo += dither16;
+	
+	albedo = RGB_YCoCg(albedo); 
+	albedo.x = sqrt(albedo.x);// do gamma compression, increases resolution of darker values
+	albedo.gb += 0.5;
+	albedo += dither64;
+
 //	normal = normal * 0.5 + 0.5;
 	normal.xy = float32x3_to_oct(normal) * 0.5 + 0.5;
 	normal += dither256;
-	specColor = sqrt(specColor);
-	specColor += dither16;
 
-	//smoothness *= smoothness;
-	smoothness += dither16;
+	specColor = sqrt(specColor);
+	specColor += dither64;
+
+	smoothness *= smoothness;
+	smoothness += dither64;
 
 	occlusion = sqrt(occlusion);
-	//occlusion += dither16;
+	occlusion += dither64;
 	
 	return
-		ToUINT_4(isSampleA ? albedo.r : specColor.r) |
-		ToUINT_4(isSampleA ? albedo.g : albedo.b) << 4 |
-
-		ToUINT_8(normal.x) << 8 |
-		ToUINT_8(normal.y) << 16 |
-
-		ToUINT_4(isSampleA ? occlusion : smoothness) << 24 |
-		ToUINT_4(isSampleA ? specColor.g : specColor.b) << 28;
+		ToUINT_8(isSampleA ? normal.x : normal.y) |
+		ToUINT_6(albedo.x) << 8 |
+		ToUINT_6(isSampleA ? albedo.y : albedo.z) << 14 |
+		ToUINT_6(isSampleA ? occlusion : smoothness) << 20;
 }
 
 
@@ -265,26 +271,27 @@ void DecodeVisibilityBuffer(
 	out float smoothness, 
 	out float occlusion)
 {
-	albedo.r = FromUINT_4((isSampleA ? encodedValue : encodedValueB));
-	albedo.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 4);
-	albedo.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 4);
-	albedo *= albedo;
-	//albedo.gb -= 0.47;
-	//albedo = YCoCg_RGB(albedo);
+	albedo.r = FromUINT_6(encodedValue >> 8);
+	albedo.g = FromUINT_6((isSampleA ? encodedValue : encodedValueB) >> 14);
+	albedo.b = FromUINT_6((isSampleA ? encodedValueB : encodedValue) >> 14);
+	albedo.x *= albedo.x;
+	albedo.gb -= 0.5;
+	albedo = YCoCg_RGB(albedo);
 
-	normal.x = FromUINT_8(encodedValue >> 8);
-	normal.y = FromUINT_8(encodedValue >> 16);
+	normal.x = FromUINT_8((isSampleA ? encodedValue : encodedValueB));
+	normal.y = FromUINT_8((isSampleA ? encodedValueB : encodedValue));
 	normal = oct_to_float32x3(normal.xy * 2.0 - 1.0);
 
-	smoothness = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 24);
-	//smoothness = sqrt(smoothness);
-	occlusion = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 24);
+	smoothness = FromUINT_6((isSampleA ? encodedValueB : encodedValue) >> 20);
+	smoothness = sqrt(smoothness);
+	occlusion = FromUINT_6((isSampleA ? encodedValue : encodedValueB) >> 20);
 	occlusion *= occlusion;
 
-	specular.r = FromUINT_4((isSampleA ? encodedValueB : encodedValue));
-	specular.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 28);
-	specular.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 28);
-	specular *= specular;
+	specular = 0;
+	//specular.r = FromUINT_4((isSampleA ? encodedValueB : encodedValue));
+	//specular.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 28);
+	//specular.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 28);
+	//specular *= specular;
 }
 
 struct ObjectToAtlasProperties

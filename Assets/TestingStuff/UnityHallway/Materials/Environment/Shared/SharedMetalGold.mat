@@ -4,10 +4,10 @@
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_Name: SharedMetalGold
-  m_Shader: {fileID: 4800000, guid: 7f27f82cf9f984543bc6b6e423fd8164, type: 3}
+  m_Shader: {fileID: 4800000, guid: 745354eac74d32e40a508c37b061878a, type: 3}
   m_ShaderKeywords: _EMISSION _LIGHTMAPPING_STATIC_LIGHTMAPS _UVSEC_UV1
   m_LightmapFlags: 0
   m_EnableInstancingVariants: 0
@@ -89,4 +89,5 @@ Material:
     - _EmissionColorUI: {r: 0, g: 0, b: 0, a: 1}
     - _EmissionColorWithMapUI: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 0.36764705, g: 0.30448425, b: 0.0405493, a: 1}
+    - _Specular: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _SpecularColor: {r: 0.6838235, g: 0.6838235, b: 0.6838235, a: 1}

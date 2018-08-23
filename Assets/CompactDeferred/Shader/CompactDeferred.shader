@@ -5,6 +5,7 @@ Shader "Compact Deferred"
 	Properties
 	{
 		_MainTex ("Texture", 2D) = "white" {}
+		_Color("Color", Color) = (1,1,1)
 		_Smoothness ("Smoothness", Range(0,1)) = 0.5
 		_Specular ("_Specular", Color) = (0.5,0.5,0.5)
 		_BumpMap("NormalMap", 2D) = "bump" {}
@@ -57,7 +58,7 @@ Shader "Compact Deferred"
 				float4 tSpace1 : TEXCOORD2;
 				float4 tSpace2 : TEXCOORD3;
 			};
-			float4 _MainTex_ST;
+			float4 _MainTex_ST, _Color;
 			v2f vert(appdata_full v)
 			{
 				v2f o;
@@ -89,8 +90,7 @@ Shader "Compact Deferred"
 			};
 			f2r frag(v2f i, uint primID : SV_PrimitiveID)
 			{
-				float3 albedo = tex2D(_MainTex, i.pack0);
-				albedo = sqrt(albedo);
+				float3 albedo = tex2D(_MainTex, i.pack0) * _Color;
 
 				half3 tnormal = UnpackNormal(tex2D(_BumpMap, i.pack0));
 				// transform normal from tangent to world space
@@ -122,6 +122,7 @@ Shader "Compact Deferred"
 					specGloss.rgb, 
 					Smoothness,
 					occlusion);
+
 				return output;
 			}
 			ENDCG
