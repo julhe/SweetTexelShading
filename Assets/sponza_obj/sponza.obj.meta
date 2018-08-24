@@ -1,6 +1,6 @@
 fileFormatVersion: 2
-guid: 329e51e32b2c6f043bd467fa1092af5b
-timeCreated: 1534607590
+guid: b1834945b338c1049935ff711d5c80a7
+timeCreated: 1493995817
 licenseType: Free
 ModelImporter:
   serializedVersion: 22
@@ -771,32 +771,6 @@ ModelImporter:
     400760: sponza_97
     400762: sponza_98
     400764: sponza_99
-    2100000: leaf
-    2100002: Material__57
-    2100004: vase_round
-    2100006: Material__298
-    2100008: 16___Default
-    2100010: bricks
-    2100012: arch
-    2100014: ceiling
-    2100016: column_a
-    2100018: column_c
-    2100020: floor
-    2100022: column_b
-    2100024: Material__47
-    2100026: flagpole
-    2100028: fabric_e
-    2100030: fabric_d
-    2100032: fabric_a
-    2100034: fabric_g
-    2100036: fabric_c
-    2100038: fabric_f
-    2100040: chain
-    2100042: vase_hanging
-    2100044: vase
-    2100046: Material__25
-    2100048: roof
-    2100050: details
     2300000: sponza_00
     2300002: sponza_01
     2300004: sponza_03
@@ -1943,142 +1917,12 @@ ModelImporter:
     4300758: sponza_97
     4300760: sponza_98
     4300762: sponza_99
-  externalObjects:
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: 16___Default
-    second: {fileID: 2100000, guid: aa0ca3f4e31072c479ac654e09b337d3, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Material__25
-    second: {fileID: 2100000, guid: 0aa959c2047d7bc4585dd116d2cc22c2, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Material__298
-    second: {fileID: 2100000, guid: 59786aba89c9c894daef1328a9991511, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Material__47
-    second: {fileID: 2100000, guid: 2015d1249ae5ffa4c9f1c0d13f523146, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Material__57
-    second: {fileID: 2100000, guid: 445047debf5716146bacc4f695387577, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: arch
-    second: {fileID: 2100000, guid: 39e49827cb4d4b0498c30a0e06006693, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: bricks
-    second: {fileID: 2100000, guid: 22bd4386db8ebf64daa85ee6bf7d4f5a, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: ceiling
-    second: {fileID: 2100000, guid: 84a79156b47a70c4a8f05b5537257697, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: chain
-    second: {fileID: 2100000, guid: ccc058dd5d88e2741968498660bd952c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: column_a
-    second: {fileID: 2100000, guid: d9ed10a026c867f4085b47ed685f1cdd, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: column_b
-    second: {fileID: 2100000, guid: f3317bdda8e81ec41a5b7b6338f8f080, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: column_c
-    second: {fileID: 2100000, guid: 25937778b52e162478407f708d887475, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: details
-    second: {fileID: 2100000, guid: c9aabb48f79b4924094ada96cf391033, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: fabric_a
-    second: {fileID: 2100000, guid: fd3b307c28d9ef7458c65d2e9e6836b1, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: fabric_c
-    second: {fileID: 2100000, guid: b6e736659bb41864ca9b32233463712c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: fabric_d
-    second: {fileID: 2100000, guid: 66a3451da3e1dc44784b20bf351e77ee, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: fabric_e
-    second: {fileID: 2100000, guid: 43e46ef971573dd4fb0d7887f545539e, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: fabric_f
-    second: {fileID: 2100000, guid: 6f53346059042e84eb053506cbbb1074, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: fabric_g
-    second: {fileID: 2100000, guid: 2839fc5fc4f007d49a0d052508b685cf, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: flagpole
-    second: {fileID: 2100000, guid: 6b613a820bb1d084285ab452c9cda89f, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: floor
-    second: {fileID: 2100000, guid: 8bda4059d807b124b91f3b07d4eda6c6, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: leaf
-    second: {fileID: 2100000, guid: 33d2e02f836e6a4488718ba5f63600d9, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: roof
-    second: {fileID: 2100000, guid: 6d96bde75c063dc41ac9499277c49237, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: vase
-    second: {fileID: 2100000, guid: 0301177d14fd2df4c81cbe357e83f9ae, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: vase_hanging
-    second: {fileID: 2100000, guid: cd4b7b6011da4624aaa567ae41fe7f1c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: vase_round
-    second: {fileID: 2100000, guid: 03ffa630f0c82244a972deaea58969b9, type: 2}
+  externalObjects: {}
   materials:
-    importMaterials: 0
+    importMaterials: 1
     materialName: 0
     materialSearch: 1
-    materialLocation: 1
+    materialLocation: 0
   animations:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
@@ -2106,10 +1950,10 @@ ModelImporter:
     globalScale: 0.01
     meshCompression: 0
     addColliders: 0
-    importVisibility: 1
+    importVisibility: 0
     importBlendShapes: 1
-    importCameras: 1
-    importLights: 1
+    importCameras: 0
+    importLights: 0
     swapUVChannels: 0
     generateSecondaryUV: 1
     useFileUnits: 1
@@ -2117,17 +1961,17 @@ ModelImporter:
     keepQuads: 0
     weldVertices: 1
     preserveHierarchy: 0
-    indexFormat: 0
+    indexFormat: 1
     secondaryUVAngleDistortion: 8
-    secondaryUVAreaDistortion: 15
+    secondaryUVAreaDistortion: 15.000001
     secondaryUVHardAngle: 88
-    secondaryUVPackMargin: 8
-    useFileScale: 0
+    secondaryUVPackMargin: 4
+    useFileScale: 1
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
     tangentImportMode: 3
-    normalCalculationMode: 4
+    normalCalculationMode: 0
   importAnimation: 0
   copyAvatar: 0
   humanDescription:

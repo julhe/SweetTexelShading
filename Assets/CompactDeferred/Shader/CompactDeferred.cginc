@@ -1,5 +1,6 @@
 #ifndef TEXEL_SHADING_INCLUDE
 #include "UnityCG.cginc"
+#include "CompactDeferred Utility.cginc"
 #define MAXIMAL_OBJECTS_PER_VIEW 512
 #define MAX_PRIMITIVES_PER_OBJECT 8192
 #define PRIMITIVE_CLUSTER_SIZE 16.0
@@ -17,8 +18,8 @@ float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
 {
 	//return 0;
 #if 0
-	float3 blueNoise = tex2D(g_Dither, vScreenPos / 32.0) * 2.0 - 1.0;
-	blueNoise /= targetRange;
+	float3 blueNoise = tex2D(g_Dither, vScreenPos / 32.0) ;
+	blueNoise /= targetRange ;
 	return blueNoise;
 	//blueNoise = mad(blueNoise, 2.0f, -1.0f);
 	//blueNoise = sign(blueNoise)*(1.0f - sqrt(1.0f - abs(blueNoise)));
@@ -29,7 +30,7 @@ float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
 	// Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR
 //float3 vDither = float3( dot( float2( 171.0, 231.0 ), vScreenPos.xy + iTime ) );
 	float3 vDither = (dot(float2(171.0, 231.0), vScreenPos.xy + _Time.y * 0));
-	vDither.rgb = frac(vDither.rgb / float3(103.0, 71.0, 97.0));
+	vDither.rgb = frac(vDither.rgb / float3(103.0, 71.0, 97.0)) ;
 	return vDither.rgb / targetRange; //note: looks better without 0.375...
 
 									  //note: not sure why the 0.5-offset is there...
@@ -94,77 +95,6 @@ float3 ditherLottes(float3 color, float2 vScreenPos, float quantizationSteps)
 }
 
 
-uint ToUINT_2(float value)
-{
-	return value * 3.0;
-}
-
-float FromUINT_2(uint value)
-{
-	return float(value & 0x00000003) / 3.0;
-}
-
-uint ToUINT_3(float value)
-{
-	return value* 7.0;
-}
-
-float FromUINT_3(uint value)
-{
-	return float(value & 0x00000007) / 7.0;
-}
-
-
-uint ToUINT_4(float value)
-{
-	return value * 15.0 ;
-}
-
-float FromUINT_4(uint value)
-{
-	return float(value & 0x0000000F) / 15.0;
-}
-
-uint ToUINT_5(float value)
-{
-	return uint(value * 31.0);
-}
-
-float FromUINT_5(uint value)
-{
-	return (value & 0x0000001F) / 31.0;
-}
-
-uint ToUINT_6(float value)
-{
-	return uint(value * 63.0);
-}
-
-float FromUINT_6(uint value)
-{
-	return (value & 0x0000003F) / 63.0;
-}
-
-uint ToUINT_7(float value)
-{
-	return uint(value * 127.0);
-}
-
-float FromUINT_7(uint value)
-{
-	return float(value & 0x0000007F) / 127.0;
-}
-
-uint ToUINT_8(float value)
-{
-	return uint(value * 255.0);
-}
-
-float FromUINT_8(uint value)
-{
-	return float(value & 0x000000FF) / 255.0;
-}
-
 // Returns ±1
 float2 signNotZero(float2 v) {
 	return float2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
@@ -216,35 +146,42 @@ bool isSampleA(uint2 pixelPos)
 {
 	return step(0.5, ((pixelPos.x + pixelPos.y) * 0.5) % 1.0);
 }
+#ifdef SINGLE_CHANNEL_GBUFFER
+#define GBUFFER_FORMAT uint
+#else
+#define GBUFFER_FORMAT uint2
+#endif
 
-uint EncodeVisibilityBuffer(
+GBUFFER_FORMAT EncodeVisibilityBuffer(
 	float2 vertexPos, 
 	bool isSampleA,
 	float3 albedo, 
 	float3 normal, 
-	float3 specColor, 
+	float metallic,
 	float smoothness,
-	float occlusion )
+	float occlusion,
+    float3 emission)
 {
-	half3 dither4 = ScreenSpaceDither(vertexPos, 4.0); 
-	half3 dither8 = ScreenSpaceDither(vertexPos, 8.0);// 3
-	half3 dither16 = ScreenSpaceDither(vertexPos, 16.0);// 4
-	half3 dither32 = ScreenSpaceDither(vertexPos, 32.0);// 5
-	half3 dither64 = ScreenSpaceDither(vertexPos, 64.0);// 6
-	half3 dither128 = ScreenSpaceDither(vertexPos, 128.0);// 7
-	half3 dither256 = ScreenSpaceDither(vertexPos, 256.0);// 8
-	
+    half3 dither4 = ScreenSpaceDither(vertexPos, 4.0);
+    half3 dither8 = ScreenSpaceDither(vertexPos, 8.0); // 3
+    half3 dither16 = ScreenSpaceDither(vertexPos, 16.0); // 4
+    half3 dither32 = ScreenSpaceDither(vertexPos, 32.0); // 5
+    half3 dither64 = ScreenSpaceDither(vertexPos, 64.0); // 6
+    half3 dither128 = ScreenSpaceDither(vertexPos, 128.0); // 7
+    half3 dither256 = ScreenSpaceDither(vertexPos, 256.0); // 8
+    half3 dither512 = ScreenSpaceDither(vertexPos, 512.0); // 9
+    half3 dither1024 = ScreenSpaceDither(vertexPos, 1024.0); // 10
+#ifdef SINGLE_CHANNEL_GBUFFER
 	albedo = RGB_YCoCg(albedo); 
-	albedo.x = sqrt(albedo.x);// do gamma compression, increases resolution of darker values
-	albedo.gb += 0.5;
-	albedo += dither64;
+	albedo.gb += 0.5; // move CoCg to [0,1] range (can be simpified)
+    albedo.x = sqrt(albedo.x); // do gamma compression, increases resolution of darker values
+	albedo.rgb += dither16;
 
-//	normal = normal * 0.5 + 0.5;
 	normal.xy = float32x3_to_oct(normal) * 0.5 + 0.5;
 	normal += dither256;
 
-	specColor = sqrt(specColor);
-	specColor += dither64;
+	//specColor = sqrt(specColor);
+	//specColor += dither64;
 
 	smoothness *= smoothness;
 	smoothness += dither64;
@@ -252,46 +189,139 @@ uint EncodeVisibilityBuffer(
 	occlusion = sqrt(occlusion);
 	occlusion += dither64;
 	
-	return
+    emission = saturate(emission);
+    emission = RGB_YCoCg(emission);
+    emission.gb += 0.5; // move CoCg to [0,1] range (can be simpified)
+    emission.x = sqrt(emission.x); // do gamma compression, increases resolution of darker values
+    emission.rgb += dither16;
+    metallic += dither16;
+    
+    return
 		ToUINT_8(isSampleA ? normal.x : normal.y) |
-		ToUINT_6(albedo.x) << 8 |
-		ToUINT_6(isSampleA ? albedo.y : albedo.z) << 14 |
-		ToUINT_6(isSampleA ? occlusion : smoothness) << 20;
+		ToUINT_4(albedo.x) << 8 |
+		ToUINT_4(isSampleA ? albedo.y : albedo.z) << 12 |
+		ToUINT_4(isSampleA ? occlusion : metallic) << 16 |
+        ToUINT_4(emission.x) << 20 |
+		ToUINT_4(isSampleA ? emission.y : emission.z) << 24 |
+        ToUINT_4(smoothness.x) << 28;
+#else
+    uint2 gbuffer = 0;
+
+    // World-Space Normals
+    normal.xy = float32x3_to_oct(normal) * 0.5 + 0.5;
+    normal.xy += dither1024;
+    gbuffer.x |= ToUINT_10(normal.x) | ToUINT_10(normal.y) << 10;
+
+
+     // Occlusion / Metallic
+    occlusion = sqrt(occlusion);
+    metallic *= metallic;
+    metallic += dither64;
+    gbuffer.x |= ToUINT_6(isSampleA ? occlusion : metallic) << 20;
+
+    // Smoothness
+    smoothness += dither64;
+    gbuffer.x |= ToUINT_6(smoothness) << 26;
+
+    // Albedo
+    albedo = sqrt(albedo); // do gamma compression, reduces banding in darker areas
+    albedo = RGB_YCoCg(albedo);
+    albedo.gb += 0.5; // move CoCg to from [-0.5, 0.5] to [0,1] range (TODO: put this into YCoCg conversion)
+    albedo += dither256;
+
+    gbuffer.y |= ToUINT_8(albedo.x);
+    gbuffer.y |= ToUINT_8(isSampleA ? albedo.y : albedo.z) << 8;
+    
+    // Emission
+    emission = saturate(emission); //TODO: do FastTonemap to go beyond 1.0
+    emission = sqrt(emission);
+    emission = RGB_YCoCg(emission);
+    
+    emission.gb += 0.5; // move CoCg to [0,1] range (can be simpified)
+    emission += dither256;
+
+    gbuffer.y |= ToUINT_8(emission.x) << 16;
+    gbuffer.y |= ToUINT_8(isSampleA ? emission.y : emission.z) << 24;
+
+    return gbuffer;
+#endif
 }
 
 
 //#define FROM_A(isSampleA, encoded)
 void DecodeVisibilityBuffer(
-	uint encodedValue,
-	uint encodedValueB, 
+	GBUFFER_FORMAT encodedValue,
+	GBUFFER_FORMAT encodedValueB,
 	bool isSampleA,
 	out float3 albedo, 
 	out float3 normal, 
-	out float3 specular, 
+	out float metallic, 
 	out float smoothness, 
-	out float occlusion)
+	out float occlusion,
+    out float3 emission)
 {
-	albedo.r = FromUINT_6(encodedValue >> 8);
-	albedo.g = FromUINT_6((isSampleA ? encodedValue : encodedValueB) >> 14);
-	albedo.b = FromUINT_6((isSampleA ? encodedValueB : encodedValue) >> 14);
-	albedo.x *= albedo.x;
-	albedo.gb -= 0.5;
+#ifdef SINGLE_CHANNEL_GBUFFER
+    albedo.r = FromUINT_4(encodedValue >> 8);
+     #ifdef  SUPERSAMPLE_MODE   
+        albedo.r += FromUINT_4(encodedValueB >> 8);
+        albedo /= 2.0;
+    #endif
+
+	albedo.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 12);
+	albedo.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 12);
+    albedo.x *= albedo.x;
+    albedo.gb -= 0.5;//
+   // +(0.125 / 16.0);
 	albedo = YCoCg_RGB(albedo);
+
 
 	normal.x = FromUINT_8((isSampleA ? encodedValue : encodedValueB));
 	normal.y = FromUINT_8((isSampleA ? encodedValueB : encodedValue));
 	normal = oct_to_float32x3(normal.xy * 2.0 - 1.0);
 
-	smoothness = FromUINT_6((isSampleA ? encodedValueB : encodedValue) >> 20);
+    smoothness = FromUINT_4(encodedValue >> 28);
 	smoothness = sqrt(smoothness);
-	occlusion = FromUINT_6((isSampleA ? encodedValue : encodedValueB) >> 20);
+	occlusion = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 16);
 	occlusion *= occlusion;
 
-	specular = 0;
-	//specular.r = FromUINT_4((isSampleA ? encodedValueB : encodedValue));
-	//specular.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 28);
-	//specular.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 28);
-	//specular *= specular;
+    metallic = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 16);;
+
+    emission.r = FromUINT_4(encodedValue >> 20);
+    emission.g = FromUINT_4((isSampleA ? encodedValue : encodedValueB) >> 24);
+    emission.b = FromUINT_4((isSampleA ? encodedValueB : encodedValue) >> 24);
+    emission.x *= emission.x;
+    emission.gb -= 0.5; 
+
+    emission = YCoCg_RGB(emission);
+    emission *= step((2.0 / 16.0), emission.x);
+#else
+
+    normal.x = FromUINT_10(encodedValue.x);
+    normal.y = FromUINT_10(encodedValue.x >> 10) ;
+    normal = oct_to_float32x3(normal.xy * 2.0 - 1.0);
+
+    albedo.r = FromUINT_8(encodedValue.y);
+    albedo.g = FromUINT_8((isSampleA ? encodedValue.y : encodedValueB.y) >> 8);
+    albedo.b = FromUINT_8((isSampleA ? encodedValueB.y : encodedValue.y) >> 8);
+    albedo.gb -= 0.5;
+    albedo = YCoCg_RGB(albedo);
+    albedo *= albedo;
+
+    metallic = FromUINT_6((isSampleA ? encodedValueB.x : encodedValue.x) >> 20);
+    metallic = sqrt(metallic);
+    occlusion = FromUINT_6((isSampleA ? encodedValue.x : encodedValueB.x) >> 20);
+    occlusion *= occlusion;
+
+    smoothness = FromUINT_6(encodedValue.x >> 26);
+
+    emission.r = FromUINT_8(encodedValue.y >> 16);
+    emission.g = FromUINT_8((isSampleA ? encodedValue.y : encodedValueB.y) >> 24);
+    emission.b = FromUINT_8((isSampleA ? encodedValueB.y : encodedValue.y) >> 24);
+    
+    emission.gb -= 0.5;
+    emission = YCoCg_RGB(emission);
+    emission *= emission;
+    #endif
 }
 
 struct ObjectToAtlasProperties

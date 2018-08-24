@@ -8,7 +8,7 @@ Material:
   m_PrefabInternal: {fileID: 0}
   m_Name: Material__25
   m_Shader: {fileID: 4800000, guid: 745354eac74d32e40a508c37b061878a, type: 3}
-  m_ShaderKeywords: _NORMALMAP _SPECGLOSSMAP
+  m_ShaderKeywords: _METALLIC_WORKFLOW _NORMALMAP _ROUGHNESS_MAPS _SPECGLOSSMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -42,6 +42,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Glossiness:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _LEAN1:
         m_Texture: {fileID: 8400000, guid: 61f7ec5ef855bfe4392bba48275291e0, type: 2}
         m_Scale: {x: 1, y: 1}
@@ -55,6 +59,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -93,11 +101,13 @@ Material:
     - _Glossiness: 0.036
     - _GlossyReflections: 1
     - _LEANbias: 0
+    - _METALLIC_WORKFLOW: 1
     - _Metallic: 0
     - _Mode: 0
     - _NDFFilteringScale: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _ROUGHNESS_MAPS: 1
     - _Smoothness: 0.808
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

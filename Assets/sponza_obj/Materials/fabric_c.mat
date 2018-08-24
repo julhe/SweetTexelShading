@@ -8,7 +8,8 @@ Material:
   m_PrefabInternal: {fileID: 0}
   m_Name: fabric_c
   m_Shader: {fileID: 4800000, guid: 745354eac74d32e40a508c37b061878a, type: 3}
-  m_ShaderKeywords: _METALLICGLOSSMAP _NORMALMAP _SPECGLOSSMAP
+  m_ShaderKeywords: _METALLICGLOSSMAP _METALLIC_WORKFLOW _NORMALMAP _ROUGHNESS_MAPS
+    _SPECGLOSSMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -42,11 +43,19 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Glossiness:
+        m_Texture: {fileID: 2800000, guid: 5ae7affc062f8984b930b5256ab66050, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
         m_Texture: {fileID: 2800000, guid: 36dc12a96dc7c964c8274941450225c5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
+        m_Texture: {fileID: 2800000, guid: 5ac00c2e06dc8e14db7e28ea18667747, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicMap:
         m_Texture: {fileID: 2800000, guid: 5ac00c2e06dc8e14db7e28ea18667747, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -78,10 +87,12 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.01
     - _GlossyReflections: 1
-    - _Metallic: 0
+    - _METALLIC_WORKFLOW: 1
+    - _Metallic: 1
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _ROUGHNESS_MAPS: 1
     - _Smoothness: 0.653
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

@@ -33,7 +33,7 @@ public class CompactDeferred : RenderPipeline
     const int kCameraDepthBufferBits = 32;
 
     CameraComparer m_CameraComparer = new CameraComparer();
-    int m_cs_ExtractVisibility, g_GBuffer, g_PosBuffer, g_Depth, g_dummyRT, g_intermediate;
+    int m_cs_ExtractVisibility, g_GBuffer, g_Depth, g_dummyRT, g_intermediate;
 
     CompactDeferredAsset m_asset;
     float timeSinceLastRender = 0f;
@@ -52,11 +52,11 @@ public class CompactDeferred : RenderPipeline
         //m_cs_CopyDataToPreFrameBuffer = m_ResolveCS.FindKernel("CopyDataToPreFrameBuffer");
 
         g_GBuffer = Shader.PropertyToID("g_GBuffer");
-        g_PosBuffer = Shader.PropertyToID("g_PosBuffer");
+        //g_PosBuffer = Shader.PropertyToID("g_PosBuffer");
         g_Depth = Shader.PropertyToID("g_Depth");
         
         g_BufferRT = new RenderTargetIdentifier(g_GBuffer);
-        g_PosBufferRT = new RenderTargetIdentifier(g_PosBuffer);
+
 
 
     }
@@ -112,12 +112,16 @@ public class CompactDeferred : RenderPipeline
             context.SetupCameraProperties(CURRENT_CAMERA, stereoEnabled);
             CURRENT_CULLRESULTS = m_CullResults;
 
-            
+            CommandBuffer cmd = CommandBufferPool.Get("Skybox");
+            cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+            m_context.ExecuteCommandBuffer(cmd);
+            m_context.DrawSkybox(CURRENT_CAMERA);
+            CommandBufferPool.Release(cmd);
             RenderGBuffer();
             Shade();
+            
         }
 
-        Debug.Log(cameras.Length);
 
         timeSinceLastRender += Time.deltaTime;
         frameCounter++;
@@ -150,32 +154,55 @@ public class CompactDeferred : RenderPipeline
         cmd.ClearRenderTarget(true, true, Color.clear);
         m_context.ExecuteCommandBuffer(cmd);
 
-        RenderOpaque(m_GBufferPass, SortFlags.CommonOpaque);
+        RenderOpaque(m_GBufferPass, SortFlags.CommonOpaque, RendererConfiguration.PerObjectLightProbe);
         CommandBufferPool.Release(cmd);
     }
 
+    List<Vector4> g_LightsOriginRange = new List<Vector4>();
+    List<Vector4> g_LightColorAngle = new List<Vector4>();
+    private const int MAX_LIGHTS = 32;
     void Shade()
     {
         CommandBuffer cmd = CommandBufferPool.Get("Shade");
-
         {
             var visibleLights = m_CullResults.visibleLights;
-            VisibleLight mainLight = new VisibleLight();
-            bool mainLightValid = false;
-            foreach (var light in visibleLights)
+            g_LightsOriginRange.Clear();
+            g_LightColorAngle.Clear();
+            for (int i = 0; i < MAX_LIGHTS; i++)
             {
-                if (light.lightType == LightType.Directional)
+                if (i >= visibleLights.Count)
                 {
-                    mainLightValid = true;
-                    mainLight = light;
+                    // fill up buffer with zero lights
+                    g_LightsOriginRange.Add(Vector4.zero);
+                    g_LightColorAngle.Add(Vector4.zero);
+                    continue;
                 }
 
+                var light = visibleLights[i];
+
+                Vector4 lightOriginRange;
+                // if it's a directional light, just treat it as a point light and place it very far away
+                lightOriginRange = light.lightType == LightType.Directional ?
+                    -light.light.transform.forward * 99999f :
+                    light.light.transform.position;
+                lightOriginRange.w = light.lightType == LightType.Directional ? 99999999f : light.range;
+                g_LightsOriginRange.Add(lightOriginRange);
+
+                Vector4 lightColorAngle;
+                lightColorAngle = light.light.color * light.light.intensity;
+                lightColorAngle.w = light.lightType == LightType.Directional ? Mathf.Cos(light.spotAngle) : 1f;
+                g_LightColorAngle.Add(lightColorAngle);
             }
-            if (mainLightValid)
-            {
-                cmd.SetGlobalVector("_WorldSpaceLightPos0", -mainLight.light.transform.forward);
-                cmd.SetGlobalColor("_LightColor0", mainLight.light.color * mainLight.light.intensity);
-            }
+
+            cmd.SetGlobalVectorArray("g_LightsOriginRange", g_LightsOriginRange);
+            cmd.SetGlobalVectorArray("g_LightColorAngle", g_LightColorAngle);
+            cmd.SetGlobalInt("g_LightsCount", Mathf.Min(MAX_LIGHTS, visibleLights.Count));
+           
+            //if (mainLightValid)
+            //{
+            //    cmd.SetGlobalVector("_WorldSpaceLightPos0", -mainLight.light.transform.forward);
+            //    cmd.SetGlobalColor("_LightColor0", mainLight.finalColor);
+            //}
 
             cmd.SetGlobalTexture("unity_SpecCube0", RenderSettings.customReflection);
             cmd.SetGlobalVector("unity_SpecCube0_HDR", Vector4.one);
@@ -187,13 +214,13 @@ public class CompactDeferred : RenderPipeline
 
             var ambProbe = RenderSettings.ambientProbe;
 
-            cmd.SetGlobalVector("unity_SHAr", new Vector4(ambProbe[0, 0], ambProbe[0, 1], ambProbe[0, 2], ambProbe[0, 3]));
-            cmd.SetGlobalVector("unity_SHAg", new Vector4(ambProbe[1, 0], ambProbe[1, 1], ambProbe[1, 2], ambProbe[0, 3]));
-            cmd.SetGlobalVector("unity_SHAb", new Vector4(ambProbe[2, 0], ambProbe[2, 1], ambProbe[2, 2], ambProbe[0, 3]));
-            cmd.SetGlobalVector("unity_SHBr", new Vector4(ambProbe[0, 4], ambProbe[0, 5], ambProbe[0, 6], ambProbe[0, 7]));
-            cmd.SetGlobalVector("unity_SHBg", new Vector4(ambProbe[1, 4], ambProbe[1, 5], ambProbe[1, 6], ambProbe[1, 7]));
-            cmd.SetGlobalVector("unity_SHBb", new Vector4(ambProbe[2, 4], ambProbe[2, 5], ambProbe[2, 6], ambProbe[2, 7]));
-            cmd.SetGlobalVector("unity_SHC" , new Vector4(ambProbe[0, 8], ambProbe[1, 8], ambProbe[2, 8], 0f));
+            //cmd.SetGlobalVector("unity_SHAr", new Vector4(ambProbe[0, 0], ambProbe[0, 1], ambProbe[0, 2], ambProbe[0, 3]));
+            //cmd.SetGlobalVector("unity_SHAg", new Vector4(ambProbe[1, 0], ambProbe[1, 1], ambProbe[1, 2], ambProbe[0, 3]));
+            //cmd.SetGlobalVector("unity_SHAb", new Vector4(ambProbe[2, 0], ambProbe[2, 1], ambProbe[2, 2], ambProbe[0, 3]));
+            //cmd.SetGlobalVector("unity_SHBr", new Vector4(ambProbe[0, 4], ambProbe[0, 5], ambProbe[0, 6], ambProbe[0, 7]));
+            //cmd.SetGlobalVector("unity_SHBg", new Vector4(ambProbe[1, 4], ambProbe[1, 5], ambProbe[1, 6], ambProbe[1, 7]));
+            //cmd.SetGlobalVector("unity_SHBb", new Vector4(ambProbe[2, 4], ambProbe[2, 5], ambProbe[2, 6], ambProbe[2, 7]));
+            //cmd.SetGlobalVector("unity_SHC" , new Vector4(ambProbe[0, 8], ambProbe[1, 8], ambProbe[2, 8], 0f));
 
             if (m_CullResults.visibleReflectionProbes.Count > 0)
             {
@@ -208,7 +235,6 @@ public class CompactDeferred : RenderPipeline
         }
 
         // shade
-        cmd.SetGlobalTexture("g_PosBuffer", g_PosBuffer);
         cmd.SetGlobalTexture("g_Depth", g_Depth);
 
         var p = GL.GetGPUProjectionMatrix(CURRENT_CAMERA.projectionMatrix, false);// Unity flips its 'Y' vector depending on if its in VR, Editor view or game view etc... (facepalm)
@@ -220,9 +246,11 @@ public class CompactDeferred : RenderPipeline
         // cmd.SetGlobalVector("_WorldSpaceCameraPos", CURRENT_CAMERA.transform.position);
 
         cmd.Blit(g_BufferRT, BuiltinRenderTextureType.CameraTarget, fullscreenMat);
+
      //   cmd.ReleaseTemporaryRT(g_PosBuffer);
         cmd.ReleaseTemporaryRT(g_GBuffer);
         cmd.ReleaseTemporaryRT(g_Depth);
+
         m_context.ExecuteCommandBuffer(cmd);
 
         CommandBufferPool.Release(cmd);

@@ -8,8 +8,9 @@ OcclusionCullingSettings:
     smallestOccluder: 0.5
     smallestHole: 0.1
     backfaceThreshold: 100
-  m_SceneGUID: 00000000000000000000000000000000
-  m_OcclusionCullingData: {fileID: 0}
+  m_SceneGUID: 1bc32c56f7329614e925f91f4bb4035c
+  m_OcclusionCullingData: {fileID: 36300000, guid: 9df2528f9bf5b70489e7802dfd866f7d,
+    type: 2}
 --- !u!104 &2
 RenderSettings:
   m_ObjectHideFlags: 0
@@ -20,8 +21,8 @@ RenderSettings:
   m_FogDensity: 1
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0, g: 0, b: 0, a: 0}
-  m_AmbientEquatorColor: {r: 1, g: 0, b: 0, a: 0}
+  m_AmbientSkyColor: {r: 0.168, g: 0.168, b: 0.168, a: 0}
+  m_AmbientEquatorColor: {r: 0.33962262, g: 0.33962262, b: 0.33962262, a: 0}
   m_AmbientGroundColor: {r: 1, g: 0, b: 0, a: 0}
   m_AmbientIntensity: 0
   m_AmbientMode: 3
@@ -36,9 +37,9 @@ RenderSettings:
   m_DefaultReflectionResolution: 128
   m_ReflectionBounces: 2
   m_ReflectionIntensity: 1
-  m_CustomReflection: {fileID: 8900000, guid: 97ca97cbc336993419c019d5c275cafe, type: 3}
+  m_CustomReflection: {fileID: 8900000, guid: c615daaef56c80749a77f15d32ace4df, type: 3}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 8.805042e-39, g: 9.0941e-41, b: 8.80502e-39, a: 1}
+  m_IndirectSpecularColor: {r: 0.68392617, g: 0.6297062, b: 0.5690807, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &4
 LightmapSettings:
@@ -53,7 +54,7 @@ LightmapSettings:
     m_TemporalCoherenceThreshold: 1
     m_EnvironmentLightingMode: 0
     m_EnableBakedLightmaps: 0
-    m_EnableRealtimeLightmaps: 1
+    m_EnableRealtimeLightmaps: 0
   m_LightmapEditorSettings:
     serializedVersion: 10
     m_Resolution: 2
@@ -89,7 +90,7 @@ LightmapSettings:
     m_PVRFilteringAtrousPositionSigmaIndirect: 2
     m_PVRFilteringAtrousPositionSigmaAO: 1
     m_ShowResolutionOverlay: 1
-  m_LightingDataAsset: {fileID: 112000142, guid: dadbcf47a8553c9489c15951c01e51ef,
+  m_LightingDataAsset: {fileID: 112000002, guid: dadbcf47a8553c9489c15951c01e51ef,
     type: 2}
   m_UseShadowmask: 0
 --- !u!196 &5
@@ -374,7 +375,7 @@ Light:
   m_GameObject: {fileID: 76370970}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.42311853, g: 0.58906305, b: 0.63235295, a: 1}
   m_Intensity: 1.7
   m_Range: 5.06
@@ -388,7 +389,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -673,7 +674,7 @@ Light:
   m_GameObject: {fileID: 106231029}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -687,7 +688,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -1937,7 +1938,7 @@ Light:
   m_GameObject: {fileID: 198097744}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8852942, b: 0.71323526, a: 1}
   m_Intensity: 4
   m_Range: 4.5
@@ -1951,7 +1952,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -2499,7 +2500,7 @@ Light:
   m_GameObject: {fileID: 284479598}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -2513,7 +2514,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -3954,7 +3955,7 @@ Light:
   m_GameObject: {fileID: 382321789}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.42311853, g: 0.58906305, b: 0.63235295, a: 1}
   m_Intensity: 1.7
   m_Range: 5.06
@@ -3968,7 +3969,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -4505,7 +4506,7 @@ Light:
   m_GameObject: {fileID: 457410536}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -4519,7 +4520,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -4571,7 +4572,7 @@ Light:
   m_GameObject: {fileID: 474378318}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -4585,7 +4586,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -4923,7 +4924,7 @@ Light:
   m_GameObject: {fileID: 581229849}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -4937,7 +4938,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -5054,7 +5055,7 @@ Light:
   m_GameObject: {fileID: 586802869}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 2.43
   m_Range: 5.06
@@ -5068,7 +5069,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -5265,7 +5266,7 @@ Light:
   m_GameObject: {fileID: 613190199}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.42311853, g: 0.58906305, b: 0.63235295, a: 1}
   m_Intensity: 1.7
   m_Range: 5.06
@@ -5279,7 +5280,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -5429,7 +5430,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &670471784
 Transform:
   m_ObjectHideFlags: 0
@@ -5897,7 +5898,7 @@ Light:
   m_GameObject: {fileID: 772933844}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.9115037, b: 0.7663819, a: 1}
   m_Intensity: 3.25
   m_Range: 5
@@ -5911,7 +5912,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -5963,10 +5964,10 @@ Light:
   m_GameObject: {fileID: 792955348}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.9115037, b: 0.7663819, a: 1}
   m_Intensity: 3.25
-  m_Range: 5
+  m_Range: 4.88
   m_SpotAngle: 85
   m_CookieSize: 10
   m_Shadows:
@@ -5977,7 +5978,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -6142,7 +6143,7 @@ Light:
   m_GameObject: {fileID: 808069412}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -6156,7 +6157,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -6556,7 +6557,7 @@ Light:
   m_GameObject: {fileID: 836158680}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.42311853, g: 0.58906305, b: 0.63235295, a: 1}
   m_Intensity: 1.7
   m_Range: 5.06
@@ -6570,7 +6571,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -6882,10 +6883,10 @@ Light:
   m_GameObject: {fileID: 870723818}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.9115037, b: 0.7663819, a: 1}
-  m_Intensity: 3.25
-  m_Range: 5
+  m_Intensity: 1.54
+  m_Range: 6
   m_SpotAngle: 85
   m_CookieSize: 10
   m_Shadows:
@@ -6896,7 +6897,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -7402,7 +7403,7 @@ Light:
   m_GameObject: {fileID: 949192295}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.5441177, g: 0.8490871, b: 1, a: 1}
   m_Intensity: 1.56
   m_Range: 5.06
@@ -7416,7 +7417,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -8000,7 +8001,7 @@ Light:
   m_GameObject: {fileID: 974459743}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -8014,7 +8015,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -8326,7 +8327,7 @@ Light:
   m_GameObject: {fileID: 997638409}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -8340,7 +8341,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -8392,7 +8393,7 @@ Light:
   m_GameObject: {fileID: 1001306243}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.42311853, g: 0.58906305, b: 0.63235295, a: 1}
   m_Intensity: 1.7
   m_Range: 5.06
@@ -8406,7 +8407,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -8807,7 +8808,7 @@ Light:
   m_GameObject: {fileID: 1031957569}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -8821,7 +8822,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -9740,7 +9741,7 @@ Light:
   m_GameObject: {fileID: 1073531928}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.5441177, g: 0.8490871, b: 1, a: 1}
   m_Intensity: 1.56
   m_Range: 5.06
@@ -9754,7 +9755,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -10063,7 +10064,7 @@ Light:
   m_GameObject: {fileID: 1098642164}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -10077,7 +10078,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -10146,7 +10147,7 @@ Light:
   m_GameObject: {fileID: 1102529381}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -10160,7 +10161,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -10212,7 +10213,7 @@ Light:
   m_GameObject: {fileID: 1117699357}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -10226,7 +10227,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -10642,7 +10643,7 @@ Light:
   m_GameObject: {fileID: 1164219153}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -10656,7 +10657,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -10882,7 +10883,7 @@ Light:
   m_GameObject: {fileID: 1172643425}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.8927783, b: 0.7663819, a: 1}
   m_Intensity: 3.25
   m_Range: 5
@@ -10896,7 +10897,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -10995,7 +10996,7 @@ Light:
   m_GameObject: {fileID: 1191237634}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.90294117, b: 0.75735295, a: 1}
   m_Intensity: 2.81
   m_Range: 5.06
@@ -11009,7 +11010,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -11255,7 +11256,7 @@ Light:
   m_GameObject: {fileID: 1197736947}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.9115037, b: 0.7663819, a: 1}
   m_Intensity: 3.25
   m_Range: 5
@@ -11269,7 +11270,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -11307,7 +11308,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1219621272}
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 6.21, y: 4.026, z: 25.866997}
+  m_LocalPosition: {x: -0.23, y: 4.026, z: 25.866997}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 670471784}
@@ -11321,7 +11322,7 @@ Light:
   m_GameObject: {fileID: 1219621272}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -11335,7 +11336,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -11387,7 +11388,7 @@ Light:
   m_GameObject: {fileID: 1228305346}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -11401,7 +11402,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -11652,7 +11653,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: -1
+  m_RenderingPath: 1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3
@@ -11803,7 +11804,7 @@ Light:
   m_GameObject: {fileID: 1292636219}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.8927783, b: 0.7663819, a: 1}
   m_Intensity: 3.25
   m_Range: 5
@@ -11817,7 +11818,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -11957,7 +11958,7 @@ Light:
   m_GameObject: {fileID: 1333018535}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -11971,7 +11972,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -12510,7 +12511,7 @@ Light:
   m_GameObject: {fileID: 1422853243}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.42311853, g: 0.58906305, b: 0.63235295, a: 1}
   m_Intensity: 1.7
   m_Range: 5.06
@@ -12524,7 +12525,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -12696,7 +12697,7 @@ Light:
   m_GameObject: {fileID: 1435588807}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.8927783, b: 0.7663819, a: 1}
   m_Intensity: 3.25
   m_Range: 5
@@ -12710,7 +12711,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -12935,7 +12936,7 @@ Light:
   m_GameObject: {fileID: 1460993359}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -12949,7 +12950,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -13084,7 +13085,7 @@ Light:
   m_GameObject: {fileID: 1495932180}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -13098,7 +13099,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -13590,7 +13591,7 @@ Light:
   m_GameObject: {fileID: 1572365626}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -13604,7 +13605,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -13737,7 +13738,7 @@ Light:
   m_GameObject: {fileID: 1591124277}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.99264705, g: 0.8927783, b: 0.7663819, a: 1}
   m_Intensity: 3.25
   m_Range: 5
@@ -13751,7 +13752,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: ab9b4ea47cd2d8743bc000cd5bc2f67d, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -14115,7 +14116,7 @@ Light:
   m_GameObject: {fileID: 1620855440}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.43448275, b: 0, a: 1}
   m_Intensity: 1.5
   m_Range: 2.4
@@ -14129,7 +14130,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -14308,7 +14309,7 @@ Light:
   m_GameObject: {fileID: 1710715346}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.43448275, b: 0, a: 1}
   m_Intensity: 1
   m_Range: 2.38
@@ -14322,7 +14323,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -14374,7 +14375,7 @@ Light:
   m_GameObject: {fileID: 1711997027}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 0.5441177, g: 0.8490871, b: 1, a: 1}
   m_Intensity: 1.56
   m_Range: 5.06
@@ -14388,7 +14389,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -14440,7 +14441,7 @@ Light:
   m_GameObject: {fileID: 1716027094}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -14454,7 +14455,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -14569,7 +14570,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 1000012930008006, guid: 4048ac168cdaea84db6ae151f702d340, type: 2}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4048ac168cdaea84db6ae151f702d340, type: 2}
@@ -15693,7 +15694,7 @@ Light:
   m_GameObject: {fileID: 1829688376}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -15707,7 +15708,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -15759,7 +15760,7 @@ Light:
   m_GameObject: {fileID: 1836787734}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.91176474, b: 0.7794118, a: 1}
   m_Intensity: 5
   m_Range: 5
@@ -16112,7 +16113,7 @@ Light:
   m_GameObject: {fileID: 1880633034}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -16126,7 +16127,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -16429,7 +16430,7 @@ Light:
   m_GameObject: {fileID: 1926290569}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8852942, b: 0.71323526, a: 1}
   m_Intensity: 4
   m_Range: 4.5
@@ -16443,7 +16444,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -16916,7 +16917,7 @@ Light:
   m_GameObject: {fileID: 1959230604}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -16930,7 +16931,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -16982,7 +16983,7 @@ Light:
   m_GameObject: {fileID: 1960066991}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.43448275, b: 0, a: 1}
   m_Intensity: 1
   m_Range: 2.38
@@ -16996,7 +16997,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -17171,7 +17172,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!108 &1966081312
 Light:
   m_ObjectHideFlags: 0
@@ -17182,7 +17183,7 @@ Light:
   serializedVersion: 8
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 4.96
+  m_Intensity: 0.97
   m_Range: 10
   m_SpotAngle: 30
   m_CookieSize: 10
@@ -17215,13 +17216,13 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1966081311}
-  m_LocalRotation: {x: -0.66307867, y: -0.25185388, z: 0.560685, w: -0.4272338}
-  m_LocalPosition: {x: -0.41, y: 1.108, z: 23.33}
+  m_LocalRotation: {x: 0.6483136, y: -0.19159561, z: 0.22787707, w: 0.70075154}
+  m_LocalPosition: {x: -0.41, y: 1.781, z: 23.268}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 12
-  m_LocalEulerAnglesHint: {x: -238.103, y: 809.327, z: -704.063}
+  m_LocalEulerAnglesHint: {x: -264.831, y: 1997.407, z: -1928.049}
 --- !u!1001 &1988023113
 Prefab:
   m_ObjectHideFlags: 0
@@ -17391,7 +17392,7 @@ Light:
   m_GameObject: {fileID: 1994069234}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 1.5
   m_Range: 4.5
@@ -17405,7 +17406,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -17678,7 +17679,7 @@ Light:
   m_GameObject: {fileID: 2011700636}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.43448275, b: 0, a: 1}
   m_Intensity: 1.5
   m_Range: 2.4
@@ -17692,7 +17693,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -19090,7 +19091,7 @@ Light:
   m_GameObject: {fileID: 2066708328}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 4.5
   m_Range: 5.06
@@ -19104,7 +19105,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -19360,7 +19361,7 @@ Light:
   m_GameObject: {fileID: 2074325722}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.95, b: 0.875, a: 1}
   m_Intensity: 2.5
   m_Range: 4.5
@@ -19374,7 +19375,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -19426,7 +19427,7 @@ Light:
   m_GameObject: {fileID: 2077085268}
   m_Enabled: 1
   serializedVersion: 8
-  m_Type: 0
+  m_Type: 2
   m_Color: {r: 1, g: 0.8890345, b: 0.75, a: 1}
   m_Intensity: 2.43
   m_Range: 5.06
@@ -19440,7 +19441,7 @@ Light:
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
-  m_Cookie: {fileID: 2800000, guid: bd0ba0b517033fb40a654af07a2f6a82, type: 3}
+  m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0

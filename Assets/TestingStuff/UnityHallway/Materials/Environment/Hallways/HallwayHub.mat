@@ -4,7 +4,7 @@
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_Name: HallwayHub
   m_Shader: {fileID: 4800000, guid: 745354eac74d32e40a508c37b061878a, type: 3}
@@ -122,7 +122,7 @@ Material:
     m_Colors:
     - _AlbedoColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.934, g: 0.934, b: 0.934, a: 1}
-    - _EmissionColor: {r: 2.1, g: 1.8814806, b: 1.6830881, a: 1}
+    - _EmissionColor: {r: 2.8036647, g: 2.524766, b: 2.2605464, a: 1}
     - _EmissionColorUI: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColorWithMapUI: {r: 0.80645907, g: 0.8714095, b: 0.89411765, a: 1}
     - _MetaDiffuseAdd: {r: 0, g: 0, b: 0, a: 1}

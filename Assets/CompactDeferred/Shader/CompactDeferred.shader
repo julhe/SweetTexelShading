@@ -4,15 +4,22 @@ Shader "Compact Deferred"
 {
 	Properties
 	{
+		
 		_MainTex ("Texture", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1)
 		_Smoothness ("Smoothness", Range(0,1)) = 0.5
-		_Specular ("_Specular", Color) = (0.5,0.5,0.5)
 		_BumpMap("NormalMap", 2D) = "bump" {}
-		_SpecGlossMap("Metallic", 2D) = "white" {}
 		_OcclusionMap("Occlusion", 2D) = "white" {}
-		_EmissionMap("Emission", 2D) = "black" {}
+		_EmissionMap("Emission", 2D) = "white" {}
 		[HDR] _EmissionColor("_EmissionColor", Color) = (0,0,0,0)
+		[Toggle(_METALLIC_WORKFLOW)] _METALLIC_WORKFLOW("Metallic Workflow", int) = 0
+		[Header(Specular)]
+		[Toggle(_ROUGHNESS_MAPS)] _ROUGHNESS_MAPS("Convert To Smoothness", int) = 0
+		_SpecGlossMap("Specular Gloss", 2D) = "white" {}
+		_Specular("Specular", Color) = (0.5,0.5,0.5)
+		[Header(Metallic)]
+		_Metallic("Metallic", Range(0,1)) = 0
+		_MetallicMap("Metallic", 2D) = "white" {}
 	}
 	SubShader
 	{
@@ -20,7 +27,7 @@ Shader "Compact Deferred"
 		LOD 100
 		CGINCLUDE
 
-		#include "TexelShading.cginc" 
+		#include "CompactDeferred.cginc" 
 
 		#pragma enable_d3d11_debug_symbols
 		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
@@ -41,7 +48,8 @@ Shader "Compact Deferred"
 			#pragma fragment frag
 			#pragma target 5.0
 			#include "UnityCG.cginc"
-
+			#pragma multi_compile __ _METALLIC_WORKFLOW
+			#pragma multi_compile __ _ROUGHNESS_MAPS
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -80,9 +88,9 @@ Shader "Compact Deferred"
 			}
 	
 			float4x4 cam_worldToView, cam_viewToWorld;
-			sampler2D _MainTex, _BumpMap, _SpecGlossMap, _EmissionMap, _OcclusionMap;
+			sampler2D _MainTex, _BumpMap, _SpecGlossMap, _EmissionMap, _OcclusionMap, _MetallicMap;
 			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
-			float _Smoothness;
+			float _Smoothness, _Metallic;
 			float3 _EmissionColor;
 			struct f2r
 			{
@@ -90,7 +98,7 @@ Shader "Compact Deferred"
 			};
 			f2r frag(v2f i, uint primID : SV_PrimitiveID)
 			{
-				float3 albedo = tex2D(_MainTex, i.pack0) * _Color;
+				float4 albedo = tex2D(_MainTex, i.pack0) * _Color;
 
 				half3 tnormal = UnpackNormal(tex2D(_BumpMap, i.pack0));
 				// transform normal from tangent to world space
@@ -105,23 +113,42 @@ Shader "Compact Deferred"
 
 				viewSpaceNormal = normalize(viewSpaceNormal);
 
+				float metallic, Smoothness;
+#if _METALLIC_WORKFLOW
+				metallic = tex2D(_MetallicMap, i.pack0) * _Metallic;
+				Smoothness = tex2D(_SpecGlossMap, i.pack0).r;
+#else
 				float4 specGloss = tex2D(_SpecGlossMap, i.pack0);
-				float Smoothness = specGloss.a * _Smoothness;
+				Smoothness = specGloss.a;
+				float specGlossAvg = max(specGloss.r, max(specGloss.g, specGloss.b));
+				float albedoAvg = max(albedo.r, max(albedo.g, albedo.b));
+				metallic = saturate((specGlossAvg - albedoAvg) / (unity_ColorSpaceDielectricSpec.r - specGlossAvg));
+				metallic = smoothstep(unity_ColorSpaceDielectricSpec.r, 1, specGlossAvg);
+#endif
+#if _ROUGHNESS_MAPS
+				Smoothness = 1.0 - Smoothness;
+#endif
+				Smoothness *= _Smoothness;
 				float occlusion = tex2D(_OcclusionMap, i.pack0);
 				float3 Emission = tex2D(_EmissionMap, i.pack0) * _EmissionColor;
 
+				Emission += ShadeSH9(float4(worldNormal,1)) * albedo.rgb * occlusion;
 				uint2 pixelPos = uint2(i.vertex.xy );
 				bool checkerboard = isSampleA(pixelPos);
 
+				
+				clip(albedo.a - 0.5);
 				f2r output;
-				output.gbuffer = EncodeVisibilityBuffer(
+				output.gbuffer = 0;
+				output.gbuffer.xy = EncodeVisibilityBuffer(
 					i.vertex.xy,
 					checkerboard,
-					albedo, 
+					albedo.rgb, 
 					worldNormal, 
-					specGloss.rgb, 
+					metallic,
 					Smoothness,
-					occlusion);
+					occlusion,
+					Emission);
 
 				return output;
 			}
@@ -431,7 +458,7 @@ Shader "Compact Deferred"
 					gi);
 
 				outColor += s.Emission;
-				return float4(s.Albedo, 1);
+				return float4(metallic.xxx, 1);
 			}
 			ENDCG
 		}
