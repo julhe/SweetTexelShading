@@ -13,9 +13,10 @@ Texel shading could potentially solve both problems by allowing to render shadin
 
 # How?
  1. Scene is rendered with information about each objects unique ID, triangle ID and mipmap level per Pixel. 
- 2. A texture atlas is generated from the information of the prevoius pass
- 3. Texel shading
- 4. Presenting the results
+ 2. A Compute shader extracts the visibile triangles and the lowest visible mip map level for each object.
+ 3. Texture atlas packing is generated with a Morten / Z-Shape code
+ 4. Objects are rendered in texture space.
+ 5. Render the scene with the texel shaded objects.
  
  All of this happens on the GPU so far! :)
 
