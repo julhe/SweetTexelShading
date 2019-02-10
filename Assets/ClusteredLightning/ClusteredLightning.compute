@@ -1,0 +1,195 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+#pragma enable_d3d11_debug_symbols
+#include "ClusteredLightning.cginc"
+
+globallycoherent RWStructuredBuffer<int> g_LightIndexCounter;
+
+
+RWTexture3D<uint2> g_FroxelToIndexOffset_rw;
+RWStructuredBuffer<uint> g_LightIndexBuffer_rw;
+Texture3D<float4> _FrustumCorners;
+SamplerState sampler_FrustumCorners;
+//RWTexture3D<float4> g_debug_FrustumOutput_rw;
+#define BLOCK_SIZE 64
+#define ToFullRange(x) (x * 2.0 - 1.0)
+groupshared int froxel_lightID[MAX_LIGHTS_PER_FROXEL];
+groupshared int froxel_lightCount;
+groupshared int froxelGlobalList_Offset;
+
+float g_nearClipingPlane, g_farClipingPlane;
+float3 g_cameraCenterWs;
+
+FrustumVertecies GetFrustumVertecies(uint3 index)
+{
+    FrustumVertecies o;
+    uint3 p = index;
+
+    float3 froxelsPerAxisInv = 1.0 / (float3(g_TotalFoxelsPerAxisX, g_TotalFoxelsPerAxisY, g_TotalFoxelsPerAxisZ)  );
+
+		// get viewport coordinates of the cell
+    float3 cell_viewport = p * froxelsPerAxisInv;
+    float3 cell_viewportNext = (p + 1) * froxelsPerAxisInv;
+    if (true /*g_flipYaxis == 1*/)
+    {
+			// also swap values to let the frustum plane normals be correct
+        float tmp = 1.0 - cell_viewport.y;
+        cell_viewport.y = 1.0 - cell_viewportNext.y;
+        cell_viewportNext.y = tmp;
+    }
+
+    //cell_viewport.z = pow(cell_viewport.z, 1.0 / ZExponent);
+    //cell_viewportNext.z = pow(cell_viewportNext.z, 1.0 / ZExponent);
+
+    cell_viewport.z = ExponetialDepthDistributionInv(cell_viewport.z);
+    cell_viewportNext.z = ExponetialDepthDistributionInv(cell_viewportNext.z);
+    bool useRightEye = false; //  (g_stereoMode == 1) && cell_viewport.x >= 0;
+
+    cell_viewport.xy = cell_viewport.xy * 2 - 1;
+    cell_viewportNext.xy = cell_viewportNext.xy * 2 - 1;
+    //acell_viewportNext += _BlueYellowRedGrad.Sample(sampler_BlueYellowRedGrad, 0.5);
+
+	// compute frustum vertecies
+    o.left_bottom_near = ViewportToWorld(float3(cell_viewport.x, cell_viewport.y, cell_viewport.z), useRightEye);
+    o.left_bottom_far = ViewportToWorld(float3(cell_viewport.x, cell_viewport.y, cell_viewportNext.z), useRightEye);
+    o.left_top_near = ViewportToWorld(float3(cell_viewport.x, cell_viewportNext.y, cell_viewport.z), useRightEye);
+    o.left_top_far = ViewportToWorld(float3(cell_viewport.x, cell_viewportNext.y, cell_viewportNext.z), useRightEye);
+
+    o.right_bottom_near = ViewportToWorld(float3(cell_viewportNext.x, cell_viewport.y, cell_viewport.z), useRightEye);
+    o.right_bottom_far = ViewportToWorld(float3(cell_viewportNext.x, cell_viewport.y, cell_viewportNext.z), useRightEye);
+    o.right_top_near = ViewportToWorld(float3(cell_viewportNext.x, cell_viewportNext.y, cell_viewport.z), useRightEye);
+    o.right_top_far = ViewportToWorld(float3(cell_viewportNext.x, cell_viewportNext.y, cell_viewportNext.z), useRightEye);
+
+    return o;
+}
+
+Frustum GetFrustum(FrustumVertecies v)
+{
+    Frustum frustum;
+    float3 center = g_cameraCenterWs;
+    frustum.planes[0] = ComputePlane(v.left_bottom_near, v.left_top_near, v.right_bottom_near); //near
+    frustum.planes[1] = ComputePlane(v.left_bottom_far, v.right_bottom_far, v.left_top_far); //far
+    frustum.planes[2] = ComputePlane(v.left_bottom_far, v.left_top_near, v.left_bottom_near); //left
+    frustum.planes[3] = ComputePlane(v.right_bottom_far, v.right_bottom_near, v.right_top_near); //right
+    frustum.planes[4] = ComputePlane(v.left_top_near, v.left_top_far, v.right_top_near); //down
+    frustum.planes[5] = ComputePlane(v.left_bottom_near, v.right_bottom_near, v.left_bottom_far); //up
+
+    return frustum;
+}
+
+#define CULLING_FRUSTUM_ONLY
+//TODO: cull lights pyramid wise? start with full screen, then divide the screen more and more
+[numthreads(BLOCK_SIZE, 1, 1)]
+void CSMain(uint3 froxelIndex : SV_GroupID, uint groupIndex : SV_GroupIndex)
+{
+    // initilize local vars
+    if (groupIndex == 0)
+    {
+        froxel_lightCount = 0;
+    }
+    AllMemoryBarrierWithGroupSync();
+
+    FrustumVertecies frustumVert = GetFrustumVertecies(froxelIndex);
+    Frustum frustum = GetFrustum(frustumVert);
+
+    // figure out front frustum size
+    float3 frontCenter = (frustumVert.left_top_near + frustumVert.right_bottom_near) / 2.0;
+    float3 backCenter = (frustumVert.left_top_far + frustumVert.right_bottom_far) / 2.0;
+
+    float3 rayDir = normalize(backCenter - frontCenter);
+
+    float frustumDiameterFront = distance(frustumVert.left_top_near, frustumVert.right_bottom_near);
+    float frustumDiameterBack = distance(frustumVert.left_top_far, frustumVert.right_bottom_far);
+
+    // iterate trough all lights
+    for (int i = groupIndex; i < g_LightsCount; i += BLOCK_SIZE)
+    {
+        float3 lightCenter = g_Lights[i].origin;
+        float4 lightSphere = float4(lightCenter, g_Lights[i].radius );
+
+        bool intersectsWithFroxel = true;
+
+        #if defined(CULLING_FRUSTUM_ONLY)
+        {
+            intersectsWithFroxel = SphereInsideFrustum(lightSphere, frustum, 0, 1);
+        }
+        #elif defined(CULLING_CAPSULE_ONLY) 
+        {
+            float lineDistance = sdCapsule(
+                lightCenter,
+                frontCenter, 
+                backCenter, 
+                frustumDiameterBack / 2.0, 
+                frustumDiameterBack / 2.0);
+            //float sphereDistance = sphIntersect(frontCenter + rayBias, rayDir, lightSphere  + lightSphereBias);
+            intersectsWithFroxel = lineDistance <= lightSphere.w;
+        }
+        #elif defined(CULLING_AABB_ONLY)
+        {
+            intersectsWithFroxel = SphereScreenAABB(lightSphere, frustumVert, froxelIndex);
+        }
+        #elif defined(CULLING_BLUNT_CONE_ONLY)
+        {
+            float froxelLength = distance(frontCenter, backCenter);
+            float3 up = normalize( frustumVert.left_top_near - frustumVert.left_bottom_near);
+            float3x3 worldToFrustumOrigin = GetRotaionMatrix(up, rayDir);
+            float3 lightCenterFrustumSpace = mul(worldToFrustumOrigin, frontCenter - lightCenter);
+           // lightCenterFrustumSpace.y = froxelLength / 2.0;
+            float distToCone = sdCappedCone(
+                lightCenterFrustumSpace,
+                froxelLength ,
+                frustumDiameterFront / 2.0,
+                frustumDiameterBack / 2.0);
+            
+            intersectsWithFroxel = distToCone < lightSphere.w;
+
+        }
+        #elif defined(CULLING_SPHERE_VIS_ONLY)
+        {
+            //first 
+
+            // get the boudning sphere of the froxel front plane
+            float3 ca = frontCenter;
+            float ra = frustumDiameterFront / 2.0;
+
+
+            intersectsWithFroxel = sphereVisibility(ca, ra, lightSphere.xyz, lightSphere.w,g_cameraCenterWs) > 1;
+            intersectsWithFroxel = intersectsWithFroxel && SphereInsideFrustum(lightSphere, frustum, 0, 1);
+            //intersectsWithFroxel = intersectsWithFroxel && !SphereInsidePlane(lightSphere, frustum.planes[1]);
+        }
+        #else
+        {
+            intersectsWithFroxel = SphereInsideFrustumExact(lightSphere, frustumVert, froxelIndex);
+        }
+        #endif
+
+        if(intersectsWithFroxel)
+        {
+            int nextLightIndex;
+            InterlockedAdd(froxel_lightCount, 1, /*out*/nextLightIndex);
+            froxel_lightID[nextLightIndex] = i;
+        }
+    }
+    AllMemoryBarrierWithGroupSync();
+
+    // get offsets for the global list
+    if (groupIndex == 0)
+    {
+        froxel_lightCount = max(froxel_lightCount, 0);
+        InterlockedAdd(
+            g_LightIndexCounter[0], 
+            froxel_lightCount, 
+            /*out*/ froxelGlobalList_Offset);
+
+        g_FroxelToIndexOffset_rw[froxelIndex] = uint2(
+            froxelGlobalList_Offset, 
+            froxelGlobalList_Offset + froxel_lightCount);
+    }
+
+    // put light indicies into light buffer
+    AllMemoryBarrierWithGroupSync();
+    for (i = groupIndex; i < froxel_lightCount; i += BLOCK_SIZE)
+    {        
+        g_LightIndexBuffer_rw[froxelGlobalList_Offset + i] = froxel_lightID[i];
+    }
+}

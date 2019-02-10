@@ -3,6 +3,7 @@
 	Properties
 	{
 		_MainTex ("Texture", 2D) = "white" {}
+
 		//g_PosBuffer("Pos", 2D) = "black" {}
 	}
 	SubShader
@@ -17,7 +18,7 @@
 			#pragma fragment frag
 			#pragma target 5.0
 			#pragma enable_d3d11_debug_symbols
-
+			#include "Assets/ClusteredLightning/ClusteredLightning.cginc"
 //#define SUPERSAMPLE_MODE
 #define UNITY_PASS_FORWARDBASE
 			#define UNITY_BRDF_PBS BRDF1_Unity_PBS
@@ -25,7 +26,7 @@
 			#include "CompactDeferred.cginc" 
 			#include "UnityPBSLighting.cginc"
 			#include "AutoLight.cginc"
-
+			#pragma multi_compile __ _FULL_GBUFFER
 			//#define UNITY_SAMPLE_FULL_SH_PER_PIXEL
 
 		
@@ -52,92 +53,99 @@
 			}
 			
 			Texture2D<uint4> _MainTex;
+
 			float4x4 camera_clipToWorld, cam_viewToWorld;
-			sampler2D g_PosBuffer;
 			//samplerCUBE unity_SpecCube0;
 			UNITY_DECLARE_DEPTH_TEXTURE(g_Depth);
 			float4 globalTest;
-#define MAX_LIGHTS 32
-			float4 g_LightsOriginRange[MAX_LIGHTS];
-			float4 g_LightColorAngle[MAX_LIGHTS];
-			int g_LightsCount;
+
 			float4 frag (v2f i) : SV_Target
 			{
 				uint2 pixelPos = uint2(i.uv * _ScreenParams.xy);
-#ifdef SUPERSAMPLE_MODE
-				pixelPos *= uint2(2, 2);
-#endif
-				bool sampA = isSampleA(pixelPos);
-				float3 albedo;
-				float3 normal,  specular, emission;
-				float smoothness, occlusion, metallic;			
-
-#ifdef SUPERSAMPLE_MODE
-				
-				float3 albedoSS;
-				float3 normalSS, emissionSS;
-				float smoothnessSS, occlusionSS, metallicSS;
-				uint2 input = _MainTex[pixelPos].xy;
-				uint2 inputB = _MainTex[pixelPos + uint2(1, 0)].xy;
-				DecodeVisibilityBuffer(
-					input,
-					inputB,
-					sampA,
-					/*out*/ albedo,
-					/*out*/ normal,
-					/*out*/ metallic,
-					/*out*/ smoothness,
-					/*out*/ occlusion,
-					/*out*/ emission);
-
-				
-				input = _MainTex[pixelPos + uint2(1,1)];
-				inputB = _MainTex[pixelPos + uint2(0, 1)];
-				DecodeVisibilityBuffer(
-					input,
-					inputB,
-					sampA,
-					/*out*/ albedoSS,
-					/*out*/ normalSS,
-					/*out*/ metallicSS,
-					/*out*/ smoothnessSS,
-					/*out*/ occlusionSS,
-					/*out*/ emissionSS);
-
-				albedo = (albedo + albedoSS) / 2.0;
-				normal = (normal + normalSS) / 2.0;
-				metallic = (metallic + metallicSS) / 2.0;
-				smoothness = (smoothness + smoothnessSS) / 2.0;
-				occlusion = (occlusion + occlusionSS) / 2.0;
-#else
-				uint2 input = _MainTex[pixelPos].xy;
-				uint2 inputB = _MainTex[pixelPos + uint2(1,0)].xy;
-				DecodeVisibilityBuffer(
-					input,
-					inputB,
-					sampA,
-					/*out*/ albedo,
-					/*out*/ normal,
-					/*out*/ metallic,
-					/*out*/ smoothness,
-					/*out*/ occlusion,
-					/*out*/ emission);
-#endif
-
-
+//#ifdef SUPERSAMPLE_MODE
+//				pixelPos *= uint2(2, 2);
+//#endif
+//
+//#if FULL_GBUFFER
+//
+//#else
+//
+//	#ifdef SUPERSAMPLE_MODE
+//				
+//					float3 albedoSS;
+//					float3 normalSS, emissionSS;
+//					float smoothnessSS, occlusionSS, metallicSS;
+//					uint2 input = _MainTex[pixelPos].xy;
+//					uint2 inputB = _MainTex[pixelPos + uint2(1, 0)].xy;
+//					DecodeVisibilityBuffer(
+//						input,
+//						inputB,
+//						sampA,
+//						/*out*/ albedo,
+//						/*out*/ normal,
+//						/*out*/ metallic,
+//						/*out*/ smoothness,
+//						/*out*/ occlusion,
+//						/*out*/ emission);
+//
+//				
+//					input = _MainTex[pixelPos + uint2(1,1)];
+//					inputB = _MainTex[pixelPos + uint2(0, 1)];
+//					DecodeVisibilityBuffer(
+//						input,
+//						inputB,
+//						sampA,
+//						/*out*/ albedoSS,
+//						/*out*/ normalSS,
+//						/*out*/ metallicSS,
+//						/*out*/ smoothnessSS,
+//						/*out*/ occlusionSS,
+//						/*out*/ emissionSS);
+//
+//					albedo = (albedo + albedoSS) / 2.0;
+//					normal = (normal + normalSS) / 2.0;
+//					metallic = (metallic + metallicSS) / 2.0;
+//					smoothness = (smoothness + smoothnessSS) / 2.0;
+//					occlusion = (occlusion + occlusionSS) / 2.0;
+//	#else
+//					//uint2 input = _MainTex[pixelPos].xy;
+//					//uint2 inputB = _MainTex[pixelPos + uint2(1,0)].xy;
+//					//DecodeVisibilityBuffer(
+//					//	input,
+//					//	inputB,
+//					//	sampA,
+//					//	/*out*/ albedo,
+//					//	/*out*/ normal,
+//					//	/*out*/ metallic,
+//					//	/*out*/ smoothness,
+//					//	/*out*/ occlusion,
+//					//	/*out*/ emission);
+//
+//					float4 gbuffer0a = g_gBuffer0[pixelPos];
+//					float4 gbuffer1a = g_gBuffer1[pixelPos];
+//					float4 gbuffer0b = g_gBuffer0[pixelPos + uint2(1, 0)];
+//					float4 gbuffer1b = g_gBuffer1[pixelPos + uint2(1, 0)];
+//					UnpackGBuffer(
+//						gbuffer0a,
+//						gbuffer1a,
+//						gbuffer0b,
+//						gbuffer1b,
+//						sampA,
+//						/*out*/ albedo,
+//						/*out*/ normal,
+//						/*out*/ metallic,
+//						/*out*/ smoothness,
+//						/*out*/ occlusion,
+//						/*out*/ emission);
+//	#endif
+//
+//#endif
 
 				//float3 normalWS = mul(cam_viewToWorld, float4(normal, 0));
 				//normalWS = normalize(normalWS);
 				// this is unity's regular standard shader
 
-				SurfaceOutputStandard s = (SurfaceOutputStandard)0;
-				s.Albedo = albedo;
-				s.Normal = normal;
-				s.Smoothness = smoothness;
-				s.Metallic = metallic;
-				s.Occlusion = occlusion;// tex2D(_OcclusionMap, i.pack0);
-				s.Emission = emission;// tex2D(_EmissionMap, i.pack0) * _EmissionColor;
-				//
+				SurfaceOutputStandard s = UnpackGBuffer(pixelPos);
 
 				float depth = SAMPLE_DEPTH_TEXTURE(g_Depth, i.uv);
 				if (depth < 0.000001)
@@ -215,40 +223,19 @@
 				half3 specColor;
 				s.Albedo = DiffuseAndSpecularFromMetallic(s.Albedo, s.Metallic, /*out*/ specColor, /*out*/ oneMinusReflectivity);
 
-				gi.indirect.diffuse = 0;
-				gi.indirect.specular = 0;
-				[loop]
-				for (int i = 0; i < g_LightsCount; i++)
-				{
-
-					float3 lightOrigin = g_LightsOriginRange[i].xyz;
-					float lightRange = g_LightsOriginRange[i].w;
-
-					float3 lightRay = lightOrigin - worldPos;
-					float lightRayLengthSqr = dot(lightRay, lightRay);
-					gi.light.color = g_LightColorAngle[i];
-					float lightAtten = saturate(lightRange - length(lightRay));
-
-					
-					if (lightAtten < 0.001)
-						continue;
-
-					gi.light.dir = normalize(lightRay);
-					giInput.light = gi.light;
-
-					outColor += UNITY_BRDF_PBS(
-						s.Albedo,
-						specColor,
-						oneMinusReflectivity, 
-						s.Smoothness,
-						s.Normal,
-						worldViewDir,
-						gi.light,
-						gi.indirect) * lightAtten ;
-				}
-				
+				i.vertex.z = (depth);
+				outColor += ShadeBRDFLights(
+					s.Albedo,
+					s.Normal,
+					specColor,
+					s.Smoothness,
+					oneMinusReflectivity,
+					gi,
+					worldViewDir,
+					worldPos,
+					i.vertex);
 		
-				float3 lit = dot(normal, lightDir) * _LightColor0 ;
+			//	float3 lit = dot(normal, lightDir) * _LightColor0 ;
 				return float4(outColor, 1);
 			}
 			ENDCG

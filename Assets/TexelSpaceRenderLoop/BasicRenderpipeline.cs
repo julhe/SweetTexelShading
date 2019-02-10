@@ -18,7 +18,7 @@ public class BasicRenderpipeline : RenderPipeline
     public static BasicRenderpipeline instance;
     const string PIPELINE_NAME = "BasicRenderpipeline";
     const int MAXIMAL_OBJECTS_PER_VIEW = 512;
-    const int SCREEN_MAX_X = 2048, SCREEN_MAX_Y = 2048;
+    const int SCREEN_MAX_X = 3840, SCREEN_MAX_Y = 2100;
     const int COMPUTE_COVERAGE_TILE_SIZE = 8;
     const int MAX_PRIMITIVES_PER_OBJECT = 65536 / PRIMITIVE_CLUSTER_SIZE;
     const int PRIMITIVE_CLUSTER_SIZE = 8;
@@ -85,7 +85,7 @@ public class BasicRenderpipeline : RenderPipeline
         // this value can get pretty large, so 
         int g_Object_MipmapLevelA_size =
             ((SCREEN_MAX_X / COMPUTE_COVERAGE_TILE_SIZE) * (SCREEN_Y / COMPUTE_COVERAGE_TILE_SIZE) * MAXIMAL_OBJECTS_PER_VIEW) / 32;
-        g_Object_MipmapLevelA = new ComputeBuffer(262144, sizeof(int), ComputeBufferType.Append); //TODO: better heristic for value
+        g_Object_MipmapLevelA = new ComputeBuffer(SCREEN_MAX_X * SCREEN_MAX_Y, sizeof(int), ComputeBufferType.Append); //TODO: better heristic for value
         g_Object_MipmapLevelB = new ComputeBuffer(g_Object_MipmapLevelA.count, g_Object_MipmapLevelA.stride, ComputeBufferType.Append);
         g_ObjectMipMapCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
     }
@@ -118,17 +118,17 @@ public class BasicRenderpipeline : RenderPipeline
                 g_VistaAtlas_B.Release();
             }
 
-            g_VistaAtlas_A = new RenderTexture(targetAtlasSize, targetAtlasSize, 0, RenderTextureFormat.RGB111110Float, RenderTextureReadWrite.Linear);
+            g_VistaAtlas_A = new RenderTexture(targetAtlasSize, targetAtlasSize, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.sRGB);
             
             g_VistaAtlas_A.Create();
             g_VistaAtlas_B = new RenderTexture(g_VistaAtlas_A);
             g_VistaAtlas_B.Create();
 
             cmd.SetRenderTarget(g_VistaAtlas_A);
-            cmd.ClearRenderTarget(true, true, Color.grey);
+            cmd.ClearRenderTarget(true, true, Color.black);
 
             cmd.SetRenderTarget(g_VistaAtlas_B);
-            cmd.ClearRenderTarget(true, true, Color.grey);
+            cmd.ClearRenderTarget(true, true, Color.black);
 
             m_context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
@@ -221,7 +221,7 @@ public class BasicRenderpipeline : RenderPipeline
         cmd.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
         if(m_asset.clearAtlasOnRefresh)
         {
-            cmd.ClearRenderTarget(true, true, Color.black);
+            cmd.ClearRenderTarget(true, true, Color.clear);
         }
           
         cmd.SetGlobalTexture("g_VistaAtlas", target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
@@ -238,9 +238,89 @@ public class BasicRenderpipeline : RenderPipeline
         float lerpFactor = Mathf.Clamp01(timeSinceLastRender / (1f / m_asset.atlasRefreshFps)); //TODO: clamp should't been neccesary
 
         cmd.SetGlobalFloat("g_atlasMorph", lerpFactor);
-
+        cmd.SetGlobalTexture("g_Dither", m_asset.dither[0]);
+        if (m_asset.TexelSpaceBackfaceCulling)
+        {
+            cmd.EnableShaderKeyword("TRIANGLE_CULLING");
+        }
+        else
+        {
+            cmd.DisableShaderKeyword("TRIANGLE_CULLING");
+        }
         m_context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
+    }
+
+    List<Vector4> g_LightsOriginRange = new List<Vector4>();
+    List<Vector4> g_LightColorAngle = new List<Vector4>();
+    private const int MAX_LIGHTS = 48;
+    public void SetupLightArray(CommandBuffer cmd, CullResults m_CullResults)
+    {
+        var visibleLights = m_CullResults.visibleLights;
+        g_LightsOriginRange.Clear();
+        g_LightColorAngle.Clear();
+        for (int i = 0; i < MAX_LIGHTS; i++)
+        {
+            if (i >= visibleLights.Count)
+            {
+                // fill up buffer with zero lights
+                g_LightsOriginRange.Add(Vector4.zero);
+                g_LightColorAngle.Add(Vector4.zero);
+                continue;
+            }
+
+            var light = visibleLights[i];
+
+            Vector4 lightOriginRange;
+            // if it's a directional light, just treat it as a point light and place it very far away
+            lightOriginRange = light.lightType == LightType.Directional ?
+                -light.light.transform.forward * 99999f :
+                light.light.transform.position;
+            lightOriginRange.w = light.lightType == LightType.Directional ? 99999999f : light.range;
+            g_LightsOriginRange.Add(lightOriginRange);
+
+            Vector4 lightColorAngle;
+            lightColorAngle = light.light.color * light.light.intensity;
+            lightColorAngle.w = light.lightType == LightType.Directional ? Mathf.Cos(light.spotAngle) : 1f;
+            g_LightColorAngle.Add(lightColorAngle);
+        }
+
+        cmd.SetGlobalVectorArray("g_LightsOriginRange", g_LightsOriginRange);
+        cmd.SetGlobalVectorArray("g_LightColorAngle", g_LightColorAngle);
+        cmd.SetGlobalInt("g_LightsCount", Mathf.Min(MAX_LIGHTS, visibleLights.Count));
+
+        //if (mainLightValid)
+        //{
+        //    cmd.SetGlobalVector("_WorldSpaceLightPos0", -mainLight.light.transform.forward);
+        //    cmd.SetGlobalColor("_LightColor0", mainLight.finalColor);
+        //}
+
+        //cmd.SetGlobalTexture("unity_SpecCube0", RenderSettings.customReflection);
+        //cmd.SetGlobalVector("unity_SpecCube0_HDR", Vector4.one);
+        //cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
+
+        //cmd.SetGlobalTexture("unity_SpecCube1", RenderSettings.customReflection);
+        //cmd.SetGlobalVector("unity_SpecCube1_HDR", Vector4.one);
+        //cmd.SetGlobalVector("unity_SpecCube1_ProbePosition", Vector4.zero);
+
+        var ambProbe = RenderSettings.ambientProbe;
+
+        //cmd.SetGlobalVector("unity_SHAr", new Vector4(ambProbe[0, 0], ambProbe[0, 1], ambProbe[0, 2], ambProbe[0, 3]));
+        //cmd.SetGlobalVector("unity_SHAg", new Vector4(ambProbe[1, 0], ambProbe[1, 1], ambProbe[1, 2], ambProbe[0, 3]));
+        //cmd.SetGlobalVector("unity_SHAb", new Vector4(ambProbe[2, 0], ambProbe[2, 1], ambProbe[2, 2], ambProbe[0, 3]));
+        //cmd.SetGlobalVector("unity_SHBr", new Vector4(ambProbe[0, 4], ambProbe[0, 5], ambProbe[0, 6], ambProbe[0, 7]));
+        //cmd.SetGlobalVector("unity_SHBg", new Vector4(ambProbe[1, 4], ambProbe[1, 5], ambProbe[1, 6], ambProbe[1, 7]));
+        //cmd.SetGlobalVector("unity_SHBb", new Vector4(ambProbe[2, 4], ambProbe[2, 5], ambProbe[2, 6], ambProbe[2, 7]));
+        //cmd.SetGlobalVector("unity_SHC" , new Vector4(ambProbe[0, 8], ambProbe[1, 8], ambProbe[2, 8], 0f));
+
+        if (m_CullResults.visibleReflectionProbes.Count > 0)
+        {
+
+
+            // cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
+
+            //    cmd.SetGlobalTexture("unity_SpecCube0", m_CullResults.visibleReflectionProbes[0].texture);
+        }
     }
 
 
@@ -248,6 +328,7 @@ public class BasicRenderpipeline : RenderPipeline
     {
         // VISIBLITY RENDER PASS
         // renders the current view as: objectID, primitveID and mipmap level
+        g_Object_MipmapLevelA.SetCounterValue(0);
         CommandBuffer cmd = CommandBufferPool.Get("RenderTexelCoverage");
         cmd.SetRenderTarget(g_VisibilityBufferID);
         //cmd.SetGlobalBuffer("g_ObjectToAtlasPropertiesRW", g_ObjectToAtlasProperties);
@@ -266,11 +347,10 @@ public class BasicRenderpipeline : RenderPipeline
         cmd.SetComputeTextureParam(m_ResolveCS, m_cs_ExtractVisibility, g_VisibilityBufferID, g_visibilityBuffer_RT);
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, g_PrimitiveVisibilityID, g_PrimitiveVisibility);
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, "g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
-        g_Object_MipmapLevelA.SetCounterValue(0);
+        
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, "g_ObjectMipMap_append", g_Object_MipmapLevelA);
         cmd.DispatchCompute(m_ResolveCS, m_cs_ExtractVisibility, SCREEN_X / COMPUTE_COVERAGE_TILE_SIZE, SCREEN_Y / COMPUTE_COVERAGE_TILE_SIZE, 1);
         cmd.CopyCounterValue(g_Object_MipmapLevelA, g_ObjectMipMapCounterValue, 0);
-
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectMipMap_consume", g_Object_MipmapLevelA);
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectMipMapCounterValue", g_ObjectMipMapCounterValue);
@@ -315,17 +395,22 @@ public class BasicRenderpipeline : RenderPipeline
     }
 
     const RendererConfiguration rendererConfiguration_shading = 
-        RendererConfiguration.PerObjectLightIndices8 | RendererConfiguration.PerObjectLightmaps | RendererConfiguration.PerObjectLightProbe | RendererConfiguration.PerObjectReflectionProbes | RendererConfiguration.ProvideLightIndices;
+        RendererConfiguration.PerObjectLightIndices8 | 
+        RendererConfiguration.PerObjectLightmaps | 
+        RendererConfiguration.PerObjectLightProbe | 
+        RendererConfiguration.PerObjectReflectionProbes | 
+        RendererConfiguration.ProvideLightIndices;
     void RenderTexelShading()
     {
         CommandBuffer cmd = CommandBufferPool.Get("RenderTexelShading");
+        SetupLightArray(cmd, m_CullResults);
         cmd.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
         cmd.SetGlobalBuffer(g_PrimitiveVisibilityID, g_PrimitiveVisibility);
         cmd.SetGlobalBuffer("g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
         cmd.SetGlobalBuffer("g_prev_ObjectToAtlasProperties", g_prev_ObjectToAtlasProperties);
         m_context.ExecuteCommandBuffer(cmd);
 
-        RenderOpaque(m_TexelSpacePass, SortFlags.OptimizeStateChanges, rendererConfiguration_shading);
+        RenderOpaque(m_TexelSpacePass, SortFlags.CommonOpaque, rendererConfiguration_shading);
 
         cmd.Clear();
         if (m_asset.debugPass == TexelSpaceDebugMode.TexelShadingPass)
@@ -346,7 +431,7 @@ public class BasicRenderpipeline : RenderPipeline
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CopyDataToPreFrameBuffer, "g_prev_ObjectToAtlasProperties", g_prev_ObjectToAtlasProperties);
         uint threadsX, threadsY, threadsZ;
         m_ResolveCS.GetKernelThreadGroupSizes(m_cs_CopyDataToPreFrameBuffer, out threadsX, out threadsY, out threadsZ);
-        cmd.DispatchCompute(m_ResolveCS, m_cs_CopyDataToPreFrameBuffer, Mathf.CeilToInt(MAXIMAL_OBJECTS_PER_VIEW / (float) threadsX), 1, 1);
+        cmd.DispatchCompute(m_ResolveCS, m_cs_CopyDataToPreFrameBuffer, Mathf.CeilToInt(MAXIMAL_OBJECTS_PER_VIEW / (float) 64.0), 1, 1);
 
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_InitalizePrimitiveVisiblity, g_PrimitiveVisibilityID, g_PrimitiveVisibility);
         cmd.DispatchCompute(m_ResolveCS, m_cs_InitalizePrimitiveVisiblity, Mathf.CeilToInt(g_PrimitiveVisibility.count / threadsX), 1, 1 );
@@ -354,12 +439,21 @@ public class BasicRenderpipeline : RenderPipeline
         CommandBufferPool.Release(cmd);
     }
 
+    
     void RenderVista()
     {
         if (m_asset.debugPass == TexelSpaceDebugMode.None)
         {
             CommandBuffer cmd = CommandBufferPool.Get("Render Vista");
-            cmd.GetTemporaryRT(g_CameraTarget, SCREEN_X, SCREEN_Y, 24, FilterMode.Bilinear, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB, Mathf.NextPowerOfTwo(m_asset.MSSALevel));
+            cmd.GetTemporaryRT(
+                g_CameraTarget, 
+                SCREEN_X, 
+                SCREEN_Y, 
+                24, 
+                FilterMode.Bilinear, 
+                RenderTextureFormat.ARGB32, 
+                RenderTextureReadWrite.sRGB, 
+                Mathf.NextPowerOfTwo(m_asset.MSSALevel));
 
             cmd.SetRenderTarget(g_CameraTarget);
             cmd.ClearRenderTarget(true, false, Color.clear);

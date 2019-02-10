@@ -46,6 +46,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _MetallicMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
         m_Texture: {fileID: 2800000, guid: 094ead6fc891a1845b923e5204f0656e, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -59,6 +63,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _ALPHA_CLIP: 0
     - _BumpScale: 1
     - _CullMode: 2
     - _Cutoff: 0.5
@@ -69,6 +74,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 1
     - _Lightmapping: 0
+    - _METALLIC_WORKFLOW: 0
     - _MetaDiffuseScale: 1.67
     - _MetaEmissionScale: 1
     - _MetaMetallicSoup: 0.343
@@ -80,6 +86,7 @@ Material:
     - _Parallax: 0.02
     - _PlaneReflectionBumpClamp: 0.05
     - _PlaneReflectionBumpScale: 0.4
+    - _ROUGHNESS_MAPS: 0
     - _Smoothness: 0.5
     - _SmoothnessInAlbedo: 0
     - _SmoothnessTextureChannel: 0

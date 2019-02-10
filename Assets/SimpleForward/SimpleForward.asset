@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 736ce5ee16a232e468a7244c897126d5, type: 3}
+  m_Name: SimpleForward
+  m_EditorClassIdentifier: 
+  froxelsX: 16
+  froxelsY: 8
+  froxelsZ: 1
+  clusteredLightning: {fileID: 7200000, guid: 2c0899a5f92157e4f961917e570c7e05, type: 3}
+  DepthPrepass: 0

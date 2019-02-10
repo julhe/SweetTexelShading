@@ -14,6 +14,13 @@ public class PlaceRandomLights : MonoBehaviour
 	    if (start)
 	    {
 	        start = false;
+
+            foreach (Transform child in transform)
+	        {
+	            DestroyImmediate(child.gameObject);
+	        }
+
+           
 	        for (int i = 0; i < count; i++)
 	        {
 	            Vector3 position;

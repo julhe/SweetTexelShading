@@ -11,8 +11,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c80b6fefa4c87e4c90a00c3c7fbd74e, type: 3}
   m_Name: CompactDeferred
   m_EditorClassIdentifier: 
-  resolveShader: {fileID: 0}
+  froxelsX: 16
+  froxelsY: 8
+  froxelsZ: 24
+  NearCluster: 2
+  clusteredLightning: {fileID: 7200000, guid: 2c0899a5f92157e4f961917e570c7e05, type: 3}
   resolveBlitShader: {fileID: 4800000, guid: 19cb73ea7815596429776afc5edb8b28, type: 3}
+  UncompressedGBuffer: 1
   RenderScale: 1
   debugPass: 0
   memoryConsumption: 0
@@ -81,3 +86,5 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 1422df695611b0543b4e90046c9140a7, type: 3}
   - {fileID: 2800000, guid: 3b88582870bc2634bbd683c2a74ad398, type: 3}
   - {fileID: 2800000, guid: dc904619fe54f1048a8867d2fe57316a, type: 3}
+  BlueYellowRedGradient: {fileID: 2800000, guid: d97101d7fe2fd144299dc3804f93e4e3,
+    type: 3}

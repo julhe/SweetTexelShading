@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_Name: Smoothness10
-  m_Shader: {fileID: 4800000, guid: 745354eac74d32e40a508c37b061878a, type: 3}
-  m_ShaderKeywords: _METALLIC_WORKFLOW
+  m_Shader: {fileID: 4800000, guid: 7f27f82cf9f984543bc6b6e423fd8164, type: 3}
+  m_ShaderKeywords: _METALLIC_WORKFLOW _NORMALMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -63,6 +63,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _ALPHA_CLIP: 0
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1

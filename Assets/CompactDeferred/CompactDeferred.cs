@@ -26,14 +26,15 @@ public class CompactDeferred : RenderPipeline
     private static CullResults CURRENT_CULLRESULTS;
     public static int SCREEN_X, SCREEN_Y;
 
+    private ClusteredLightning clusteredLightning;
     RenderTexture g_VistaAtlas_A, g_VistaAtlas_B;
     bool target_atlasA;
-    RenderTargetIdentifier g_BufferRT, g_CameraTarget_RT, g_PosBufferRT;
+    RenderTargetIdentifier g_Buffer0RT, g_Buffer1RT, g_Buffer2RT, g_Buffer3RT, g_CameraTarget_RT, g_PosBufferRT;
     Vector2Int g_visibilityBuffer_dimension;
     const int kCameraDepthBufferBits = 32;
 
     CameraComparer m_CameraComparer = new CameraComparer();
-    int m_cs_ExtractVisibility, g_GBuffer, g_Depth, g_dummyRT, g_intermediate;
+    int m_cs_ExtractVisibility, g_GBuffer0, g_GBuffer1, g_GBuffer2, g_GBuffer3, g_Depth, g_dummyRT, g_intermediate;
 
     CompactDeferredAsset m_asset;
     float timeSinceLastRender = 0f;
@@ -51,19 +52,25 @@ public class CompactDeferred : RenderPipeline
         //m_cs_AtlasPacking = m_ResolveCS.FindKernel("AtlasPacking");
         //m_cs_CopyDataToPreFrameBuffer = m_ResolveCS.FindKernel("CopyDataToPreFrameBuffer");
 
-        g_GBuffer = Shader.PropertyToID("g_GBuffer");
+        g_GBuffer0 = Shader.PropertyToID("g_GBuffer0");
+        g_GBuffer1 = Shader.PropertyToID("g_GBuffer1");
+        g_GBuffer2 = Shader.PropertyToID("g_GBuffer2");
+        g_GBuffer3 = Shader.PropertyToID("g_GBuffer3");
         //g_PosBuffer = Shader.PropertyToID("g_PosBuffer");
         g_Depth = Shader.PropertyToID("g_Depth");
-        
-        g_BufferRT = new RenderTargetIdentifier(g_GBuffer);
 
+        g_Buffer0RT = new RenderTargetIdentifier(g_GBuffer0);
+        g_Buffer1RT = new RenderTargetIdentifier(g_GBuffer1);
+        g_Buffer2RT = new RenderTargetIdentifier(g_GBuffer2);
+        g_Buffer3RT = new RenderTargetIdentifier(g_GBuffer3);
 
-
+        clusteredLightning = new ClusteredLightning(m_asset.clusteredLightning);
     }
 
     public override void Dispose()
     {
         base.Dispose();
+        clusteredLightning.Dispose();
         instance = null;
         Shader.globalRenderPipeline = "";
 
@@ -94,7 +101,7 @@ public class CompactDeferred : RenderPipeline
         bool stereoEnabled = XRSettings.isDeviceActive;
         // Sort cameras array by camera depth
         Array.Sort(cameras, m_CameraComparer);
-
+        clusteredLightning.SetParameters(m_asset.froxelsX, m_asset.froxelsY, m_asset.froxelsZ);
 
         foreach (Camera camera in cameras)
         {
@@ -102,24 +109,27 @@ public class CompactDeferred : RenderPipeline
             ScriptableCullingParameters cullingParameters;
             if (!CullResults.GetCullingParameters(CURRENT_CAMERA, stereoEnabled, out cullingParameters))
                 continue;
+
+            CullResults.Cull(ref cullingParameters, context, ref m_CullResults);
+            context.SetupCameraProperties(CURRENT_CAMERA, stereoEnabled);
+            CURRENT_CULLRESULTS = m_CullResults;
+
+            CommandBuffer cmd = CommandBufferPool.Get("Globals");
+            cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+            cmd.SetGlobalTexture("_BlueYellowRedGrad", m_asset.BlueYellowRedGradient);
+            m_context.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
+            m_context.DrawSkybox(CURRENT_CAMERA);
+
+            RenderGBuffer();
+            Shade();
+
 #if UNITY_EDITOR
             // Emit scene view UI
             if (camera.cameraType == CameraType.SceneView)
                 ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
 #endif
 
-            CullResults.Cull(ref cullingParameters, context, ref m_CullResults);
-            context.SetupCameraProperties(CURRENT_CAMERA, stereoEnabled);
-            CURRENT_CULLRESULTS = m_CullResults;
-
-            CommandBuffer cmd = CommandBufferPool.Get("Skybox");
-            cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
-            m_context.ExecuteCommandBuffer(cmd);
-            m_context.DrawSkybox(CURRENT_CAMERA);
-            CommandBufferPool.Release(cmd);
-            RenderGBuffer();
-            Shade();
-            
         }
 
 
@@ -130,7 +140,7 @@ public class CompactDeferred : RenderPipeline
      //   m_asset.memoryConsumption /= 1024 * 1024;
     }
 
-    RenderTargetIdentifier[] gBuffer = new RenderTargetIdentifier[1];
+    RenderTargetIdentifier[] gBuffer;
     void RenderGBuffer()
     {
         CommandBuffer cmd = CommandBufferPool.Get("GBuffer");
@@ -143,12 +153,32 @@ public class CompactDeferred : RenderPipeline
 
         int renderScale_X = Mathf.RoundToInt(m_asset.RenderScale * screenX);
         int renderScale_Y = Mathf.RoundToInt(m_asset.RenderScale * screenY);
-        cmd.GetTemporaryRT(g_GBuffer, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.RGInt);
-        //cmd.GetTemporaryRT(g_PosBuffer, screenX, screenY, 0, FilterMode.Point, RenderTextureFormat.ARGBFloat);
-        cmd.GetTemporaryRT(g_Depth, renderScale_X, renderScale_Y, 32, FilterMode.Point, RenderTextureFormat.Depth);
+        //NOTE: difference from 64Bit integer target to 32bit+32Bit fixed target is only ~0.2ms
+        if (m_asset.UncompressedGBuffer)
+        {
+            cmd.GetTemporaryRT(g_GBuffer0, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            cmd.GetTemporaryRT(g_GBuffer1, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
+            cmd.GetTemporaryRT(g_GBuffer2, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+            cmd.GetTemporaryRT(g_GBuffer3, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.RGB111110Float, RenderTextureReadWrite.Linear);
 
-        gBuffer[0] = g_GBuffer;
-      //  gBuffer[1] = g_PosBuffer;
+            gBuffer = new RenderTargetIdentifier[4];
+            gBuffer[0] = g_GBuffer0;
+            gBuffer[1] = g_GBuffer1;
+            gBuffer[2] = g_GBuffer2;
+            gBuffer[3] = g_GBuffer3;
+            cmd.EnableShaderKeyword("_FULL_GBUFFER");
+        }
+        else
+        {
+            cmd.GetTemporaryRT(g_GBuffer0, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
+            cmd.GetTemporaryRT(g_GBuffer1, renderScale_X, renderScale_Y, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+            gBuffer = new RenderTargetIdentifier[2];
+            gBuffer[0] = g_GBuffer0;
+            gBuffer[1] = g_GBuffer1;
+            cmd.DisableShaderKeyword("_FULL_GBUFFER");
+        }
+        // accquire depth rendertarget
+        cmd.GetTemporaryRT(g_Depth, renderScale_X, renderScale_Y, 32, FilterMode.Point, RenderTextureFormat.Depth);
         cmd.SetRenderTarget(gBuffer, g_Depth);
 
         cmd.ClearRenderTarget(true, true, Color.clear);
@@ -158,81 +188,12 @@ public class CompactDeferred : RenderPipeline
         CommandBufferPool.Release(cmd);
     }
 
-    List<Vector4> g_LightsOriginRange = new List<Vector4>();
-    List<Vector4> g_LightColorAngle = new List<Vector4>();
     private const int MAX_LIGHTS = 32;
     void Shade()
     {
+
         CommandBuffer cmd = CommandBufferPool.Get("Shade");
-        {
-            var visibleLights = m_CullResults.visibleLights;
-            g_LightsOriginRange.Clear();
-            g_LightColorAngle.Clear();
-            for (int i = 0; i < MAX_LIGHTS; i++)
-            {
-                if (i >= visibleLights.Count)
-                {
-                    // fill up buffer with zero lights
-                    g_LightsOriginRange.Add(Vector4.zero);
-                    g_LightColorAngle.Add(Vector4.zero);
-                    continue;
-                }
-
-                var light = visibleLights[i];
-
-                Vector4 lightOriginRange;
-                // if it's a directional light, just treat it as a point light and place it very far away
-                lightOriginRange = light.lightType == LightType.Directional ?
-                    -light.light.transform.forward * 99999f :
-                    light.light.transform.position;
-                lightOriginRange.w = light.lightType == LightType.Directional ? 99999999f : light.range;
-                g_LightsOriginRange.Add(lightOriginRange);
-
-                Vector4 lightColorAngle;
-                lightColorAngle = light.light.color * light.light.intensity;
-                lightColorAngle.w = light.lightType == LightType.Directional ? Mathf.Cos(light.spotAngle) : 1f;
-                g_LightColorAngle.Add(lightColorAngle);
-            }
-
-            cmd.SetGlobalVectorArray("g_LightsOriginRange", g_LightsOriginRange);
-            cmd.SetGlobalVectorArray("g_LightColorAngle", g_LightColorAngle);
-            cmd.SetGlobalInt("g_LightsCount", Mathf.Min(MAX_LIGHTS, visibleLights.Count));
-           
-            //if (mainLightValid)
-            //{
-            //    cmd.SetGlobalVector("_WorldSpaceLightPos0", -mainLight.light.transform.forward);
-            //    cmd.SetGlobalColor("_LightColor0", mainLight.finalColor);
-            //}
-
-            cmd.SetGlobalTexture("unity_SpecCube0", RenderSettings.customReflection);
-            cmd.SetGlobalVector("unity_SpecCube0_HDR", Vector4.one);
-            cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
-
-            cmd.SetGlobalTexture("unity_SpecCube1", RenderSettings.customReflection);
-            cmd.SetGlobalVector("unity_SpecCube1_HDR", Vector4.one);
-            cmd.SetGlobalVector("unity_SpecCube1_ProbePosition", Vector4.zero);
-
-            var ambProbe = RenderSettings.ambientProbe;
-
-            //cmd.SetGlobalVector("unity_SHAr", new Vector4(ambProbe[0, 0], ambProbe[0, 1], ambProbe[0, 2], ambProbe[0, 3]));
-            //cmd.SetGlobalVector("unity_SHAg", new Vector4(ambProbe[1, 0], ambProbe[1, 1], ambProbe[1, 2], ambProbe[0, 3]));
-            //cmd.SetGlobalVector("unity_SHAb", new Vector4(ambProbe[2, 0], ambProbe[2, 1], ambProbe[2, 2], ambProbe[0, 3]));
-            //cmd.SetGlobalVector("unity_SHBr", new Vector4(ambProbe[0, 4], ambProbe[0, 5], ambProbe[0, 6], ambProbe[0, 7]));
-            //cmd.SetGlobalVector("unity_SHBg", new Vector4(ambProbe[1, 4], ambProbe[1, 5], ambProbe[1, 6], ambProbe[1, 7]));
-            //cmd.SetGlobalVector("unity_SHBb", new Vector4(ambProbe[2, 4], ambProbe[2, 5], ambProbe[2, 6], ambProbe[2, 7]));
-            //cmd.SetGlobalVector("unity_SHC" , new Vector4(ambProbe[0, 8], ambProbe[1, 8], ambProbe[2, 8], 0f));
-
-            if (m_CullResults.visibleReflectionProbes.Count > 0)
-            {
-     
-              
-               // cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
-                
-            //    cmd.SetGlobalTexture("unity_SpecCube0", m_CullResults.visibleReflectionProbes[0].texture);
-            }
-         
-           
-        }
+        clusteredLightning.SetupClusteredLightning(ref cmd, m_CullResults, CURRENT_CAMERA, m_asset.NearCluster);
 
         // shade
         cmd.SetGlobalTexture("g_Depth", g_Depth);
@@ -244,11 +205,17 @@ public class CompactDeferred : RenderPipeline
         cmd.SetGlobalMatrix("camera_clipToWorld", clipToWorld);
 
         // cmd.SetGlobalVector("_WorldSpaceCameraPos", CURRENT_CAMERA.transform.position);
-
-        cmd.Blit(g_BufferRT, BuiltinRenderTextureType.CameraTarget, fullscreenMat);
+        cmd.SetGlobalTexture("g_gBuffer0", g_GBuffer0);
+        cmd.SetGlobalTexture("g_gBuffer1", g_GBuffer1);
+        cmd.SetGlobalTexture("g_gBuffer2", g_GBuffer2);
+        cmd.SetGlobalTexture("g_gBuffer3", g_GBuffer3);
+        cmd.Blit(g_GBuffer0, BuiltinRenderTextureType.CameraTarget, fullscreenMat);
 
      //   cmd.ReleaseTemporaryRT(g_PosBuffer);
-        cmd.ReleaseTemporaryRT(g_GBuffer);
+        cmd.ReleaseTemporaryRT(g_GBuffer0);
+        cmd.ReleaseTemporaryRT(g_GBuffer1);
+        cmd.ReleaseTemporaryRT(g_GBuffer2);
+        cmd.ReleaseTemporaryRT(g_GBuffer3);
         cmd.ReleaseTemporaryRT(g_Depth);
 
         m_context.ExecuteCommandBuffer(cmd);

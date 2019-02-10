@@ -1,5 +1,6 @@
 #ifndef TEXEL_SHADING_INCLUDE
 #include "UnityCG.cginc"
+#include "UnityPBSLighting.cginc"
 #include "CompactDeferred Utility.cginc"
 #define MAXIMAL_OBJECTS_PER_VIEW 512
 #define MAX_PRIMITIVES_PER_OBJECT 8192
@@ -17,7 +18,7 @@ sampler2D g_Dither;
 float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
 {
 	//return 0;
-#if 0
+#if 1
 	float3 blueNoise = tex2D(g_Dither, vScreenPos / 32.0) ;
 	blueNoise /= targetRange ;
 	return blueNoise;
@@ -43,27 +44,42 @@ float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
 // https://software.intel.com/en-us/node/503873
 float3 RGB_YCoCg(float3 c)
 {
+    float3x3 RGB_To_YCoCg =
+    {
+        +0.25, 0.5, +0.25,
+        +0.50, 0.0, -0.50,
+        -0.25, 0.5, -0.25,
+    };
 	// Y = R/4 + G/2 + B/4
 	// Co = R/2 - B/2
 	// Cg = -R/4 + G/2 - B/4
-	return float3(
-		c.x / 4.0 + c.y / 2.0 + c.z / 4.0,
-		c.x / 2.0 - c.z / 2.0,
-		-c.x / 4.0 + c.y / 2.0 - c.z / 4.0
-		);
+    return mul(RGB_To_YCoCg, c);
+	//return float3(
+	//	c.x / 4.0 + c.y / 2.0 + c.z / 4.0,
+	//	c.x / 2.0 - c.z / 2.0,
+	//	-c.x / 4.0 + c.y / 2.0 - c.z / 4.0
+	//	);
 }
 
 // https://software.intel.com/en-us/node/503873
 float3 YCoCg_RGB(float3 c)
 {
+
+    float3x3 YCoCg_To_RGB =
+    {
+        +1, 1, -1,
+        +1, 0,  1,
+        +1, -1, -1,
+    };
+    return mul(YCoCg_To_RGB, c);
 	// R = Y + Co - Cg
 	// G = Y + Cg
 	// B = Y - Co - Cg
-	return float3(
-		c.x + c.y - c.z,
-		c.x + c.z,
-		c.x - c.y - c.z
-		);
+//	return float3(
+//		c.x + c.y - c.z,
+//		c.x + c.z,
+//		c.x - c.y - c.z
+//		);
 }
 
 float3 ditherLottes(float3 color, float2 vScreenPos, float quantizationSteps)
@@ -102,7 +118,7 @@ float2 signNotZero(float2 v) {
 // Assume normalized input. Output is on [-1, 1] for each component.
 float2 float32x3_to_oct(in float3 v) {
 	// Project the sphere onto the octahedron, and then onto the xy plane
-	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+    float2 p = v.xy * rcp( dot( abs(v), 1) );
 	// Reflect the folds of the lower hemisphere over the diagonals
 	return (v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p;
 }
@@ -119,7 +135,7 @@ float3 oct_to_float32x3(float2 e) {
 float2 float32x3_to_hemioct(in float3 v) {
 	// Project the hemisphere onto the hemi-octahedron,
 	// and then into the xy plane
-	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
+	float2 p = v.xy * rcp( (abs(v.x) + abs(v.y) + v.z));
 	// Rotate and scale the center diamond to the unit square
 	return float2(p.x + p.y, p.x - p.y);
 }
@@ -142,15 +158,149 @@ float3 InverseNeutralTonemapping(in float3 color)
 	return color.rgb / (1 - luma);
 }
 
+struct GBuffers
+{
+    //uint4 gbuffer : SV_Target0;
+    float4 gbuffer0 : SV_Target0;
+    float4 gbuffer1 : SV_Target1;
+#ifdef _FULL_GBUFFER
+	float4 gbuffer2 : SV_Target2;
+	float4 gbuffer3 : SV_Target3;
+#endif
+};
+
 bool isSampleA(uint2 pixelPos)
 {
 	return step(0.5, ((pixelPos.x + pixelPos.y) * 0.5) % 1.0);
 }
+
 #ifdef SINGLE_CHANNEL_GBUFFER
 #define GBUFFER_FORMAT uint
 #else
 #define GBUFFER_FORMAT uint2
 #endif
+
+Texture2D<float4> g_gBuffer0, g_gBuffer1, g_gBuffer2, g_gBuffer3;
+GBuffers PackGBuffer(
+	float2 vertexPos, 
+    SurfaceOutputStandard s
+)
+{
+    half3 dither4 = ScreenSpaceDither(vertexPos, 4.0);
+    half3 dither8 = ScreenSpaceDither(vertexPos, 8.0); // 3
+    half3 dither16 = ScreenSpaceDither(vertexPos, 16.0); // 4
+    half3 dither32 = ScreenSpaceDither(vertexPos, 32.0); // 5
+    half3 dither64 = ScreenSpaceDither(vertexPos, 64.0); // 6
+    half3 dither128 = ScreenSpaceDither(vertexPos, 128.0); // 7
+    half3 dither256 = ScreenSpaceDither(vertexPos, 256.0); // 8
+    half3 dither512 = ScreenSpaceDither(vertexPos, 512.0); // 9
+    half3 dither1024 = ScreenSpaceDither(vertexPos, 1024.0); // 10
+    GBuffers output;
+
+    #ifdef _FULL_GBUFFER
+
+        output.gbuffer0.rgb = s.Albedo;
+        output.gbuffer0.a = s.Occlusion;
+        output.gbuffer1.rgb =  s.Normal * 0.5 + 0.5;
+        output.gbuffer2.r =  s.Metallic;
+        output.gbuffer2.g = s.Smoothness;
+        output.gbuffer3.rgb =  s.Emission;
+    #else
+
+        bool isSmpA = isSampleA(uint2(vertexPos));
+
+        // World-Space Normals
+        s.Normal.xy = float32x3_to_oct(s.Normal) * 0.5 + 0.5;
+       // normal.xy += dither1024;
+        output.gbuffer0.xy = s.Normal;
+
+         // Occlusion 
+        s.Occlusion = sqrt(s.Occlusion);
+        s.Occlusion += dither4;
+        output.gbuffer0.w = s.Occlusion;
+
+        // Smoothness / Metallic
+        s.Metallic *= s.Metallic;
+        output.gbuffer1.z = isSmpA ? s.Metallic : s.Smoothness;
+
+        // Albedo
+        s.Albedo = sqrt(s.Albedo); // do gamma compression, reduces banding in darker areas
+        s.Albedo = RGB_YCoCg(s.Albedo);
+        s.Albedo.gb += 0.5; // move CoCg to from [-0.5, 0.5] to [0,1] range (TODO: put this into YCoCg conversion)
+        s.Albedo += dither256;
+
+        output.gbuffer1.x = s.Albedo.x;
+        output.gbuffer1.y = isSmpA ? s.Albedo.y : s.Albedo.z;
+    
+        // Emission
+        s.Emission = saturate(s.Emission); //TODO: do FastTonemap to go beyond 1.0
+        s.Emission = sqrt(s.Emission);
+        s.Emission = RGB_YCoCg(s.Emission);
+    
+        s.Emission.gb += 0.5; // move CoCg to [0,1] range (can be simpified)
+        s.Emission += dither256;
+
+        output.gbuffer0.z = s.Emission.x;
+        output.gbuffer1.w = isSmpA ? s.Emission.y : s.Emission.z;
+    #endif
+    return output;
+}
+
+SurfaceOutputStandard UnpackGBuffer(uint2 pixelPosition)
+{
+    SurfaceOutputStandard s = (SurfaceOutputStandard) 0;
+    #ifdef _FULL_GBUFFER
+        float4 gbuffer0 = g_gBuffer0[pixelPosition];
+        float4 gbuffer1 = g_gBuffer1[pixelPosition];
+        float4 gbuffer2 = g_gBuffer2[pixelPosition];
+        float4 gbuffer3 = g_gBuffer3[pixelPosition];
+
+        s.Albedo = gbuffer0.rgb;
+        s.Occlusion = gbuffer0.a;
+
+        s.Normal = normalize(gbuffer1.rgb * 2.0 - 1.0);
+        
+        s.Metallic = gbuffer2.r;
+        s.Smoothness = gbuffer2.g;
+       
+        s.Emission = gbuffer3.rgb;
+    #else
+
+        bool isSmpA = isSampleA(pixelPosition);
+        float4 gbuffer0a = g_gBuffer0[pixelPosition];
+        float4 gbuffer1a = g_gBuffer1[pixelPosition];
+        float4 gbuffer0b = g_gBuffer0[pixelPosition + uint2(1, 0)];
+        float4 gbuffer1b = g_gBuffer1[pixelPosition + uint2(1, 0)];
+
+        s.Normal.xy = gbuffer0a.xy;
+        s.Normal = oct_to_float32x3(s.Normal.xy * 2.0 - 1.0);
+
+        s.Albedo.r = gbuffer1a.x;
+        s.Albedo.g = isSmpA ? gbuffer1a.y : gbuffer1b.y;
+        s.Albedo.b = isSmpA ? gbuffer1b.y : gbuffer1a.y;
+        s.Albedo.gb -= 0.5; // map CoCg back to [-0.5, 0.5]
+        s.Albedo = YCoCg_RGB(s.Albedo);
+        s.Albedo *= s.Albedo; // reverse gamma compression
+
+        s.Occlusion = gbuffer0a.w * gbuffer0a.w;
+
+        s.Metallic = isSmpA ? gbuffer1a.z : gbuffer1b.z;
+        s.Metallic = sqrt(s.Metallic);
+
+        s.Smoothness = isSmpA ? gbuffer1b.z : gbuffer1a.z;
+
+        s.Emission.r = gbuffer0a.z;
+        s.Emission.g = (isSmpA ? gbuffer1a.w : gbuffer1b.w);
+        s.Emission.b = (isSmpA ? gbuffer1b.w : gbuffer1a.w);
+    
+        s.Emission.gb -= 0.5; // map CoCg back to [-0.5, 0.5]
+        s.Emission = YCoCg_RGB(s.Emission);
+        s.Emission *= s.Emission; // reverse gamma compression
+    #endif
+
+    return s;
+}
+
 
 GBUFFER_FORMAT EncodeVisibilityBuffer(
 	float2 vertexPos, 

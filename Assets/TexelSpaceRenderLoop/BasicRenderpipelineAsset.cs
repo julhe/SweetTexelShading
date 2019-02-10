@@ -10,7 +10,7 @@ public class BasicRenderpipelineAsset : RenderPipelineAsset
 
     public ComputeShader resolveShader;
     public Shader resolveBlitShader;
-    [Range(3, 13)]
+    [Range(3, 14)]
     public int maximalAtlasSizeExponent;
     public int maximalAtlasSizePixel
     {
@@ -22,11 +22,14 @@ public class BasicRenderpipelineAsset : RenderPipelineAsset
     public float atlasRefreshFps = 30;
     public int MSSALevel;
     public bool clearAtlasOnRefresh = false;
+    public bool TexelSpaceBackfaceCulling = true;
     public TexelSpaceDebugMode debugPass = TexelSpaceDebugMode.None;
 
     public float memoryConsumption;
+    public Texture2D[] dither;
     protected override IRenderPipeline InternalCreatePipeline()
     {
+        dither = Resources.LoadAll<Texture2D>("Noise16pxLDR");
         return new BasicRenderpipeline(this);
     }
 

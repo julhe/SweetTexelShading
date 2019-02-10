@@ -13,9 +13,9 @@ RWStructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
 RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
 
 [numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
-void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 groupID : SV_GroupID)
 {
-	int index = groupIndex;
+    int index = groupIndex + groupID.x * SINGLE_ROW_THREAD_SIZE;
 	g_prev_ObjectToAtlasProperties[index] = g_ObjectToAtlasProperties[index];
 
 	g_ObjectToAtlasProperties[index].objectID = index; // reset object ID
@@ -64,6 +64,10 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 
 	if (objectID != 0) // 0 means "undefined"
 	{
+        // clamp the mipmap level
+        mipmapLevel = min(ATLAS_OBJECT_SIZEEXPONENT_MAX, mipmapLevel);
+        mipmapLevel = max(ATLAS_OBJECT_SIZEEXPONENT_MIN, mipmapLevel);
+
 		// obtain highest mipmap level of object per thread group
 		InterlockedMax(shared_Object_MipmapLevel[objectID], mipmapLevel);
 
@@ -229,7 +233,7 @@ float4 GetUVToAtlasScaleOffset(float4 atlasPixelSpace)
 #pragma kernel AtlasPacking
 
 uint g_atlasAxisSize;
-uint gshared_atlasIndex;
+groupshared uint gshared_atlasIndex;
 [numthreads(1,1,1)] 
 void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
@@ -239,31 +243,28 @@ void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupInde
 	}
 	AllMemoryBarrierWithGroupSync();
 
+    // start with the highest exponent, this is very neccessary because of the sturcture of the morten code.
+    [unroll]
 	for (uint j = ATLAS_OBJECT_SIZEEXPONENT_MAX; ATLAS_OBJECT_SIZEEXPONENT_MIN <= j; j--)
 	{
-		for (uint i = 1; i < g_totalObjectsInView; i++)
+        //offset by 1, since 0 is undefined
+        for (uint i = groupIndex + 1; i < g_totalObjectsInView; i++)
 		{
-
-			// TODO: can't use clamp() somehow...
-			// clamp atlasExponent to [ATLAS_OBJECT_SIZEEXPONENT_MIN, ATLAS_OBJECT_SIZEEXPONENT_MAX]
 			uint objectTileAxisExponent = g_ObjectToAtlasProperties[i].sizeExponent;
-			objectTileAxisExponent = min(ATLAS_OBJECT_SIZEEXPONENT_MAX, objectTileAxisExponent);
-			objectTileAxisExponent = max(ATLAS_OBJECT_SIZEEXPONENT_MIN, objectTileAxisExponent);
-
-			if (objectTileAxisExponent == j)
-			{
+            if (objectTileAxisExponent == j)
+            {
 				// calculate object size in atlas units
-				uint objectTilesAxis = pow(2, objectTileAxisExponent) / ATLAS_TILE_SIZE;
+                uint objectTilesAxis = pow(2, objectTileAxisExponent) / ATLAS_TILE_SIZE;
+                uint objectTilesTotal = objectTilesAxis * objectTilesAxis;
 
-				uint objectTilesTotal = objectTilesAxis * objectTilesAxis;
-		
-				float4 atlasRect = GetTextureRect(gshared_atlasIndex, objectTilesAxis);
-				g_ObjectToAtlasProperties[i].atlas_ST = GetUVToAtlasScaleOffset(atlasRect) / (float)g_atlasAxisSize;
-
-				gshared_atlasIndex += objectTilesTotal;
-			}
-		}
-	}
+                int atlasIndex;
+                InterlockedAdd(gshared_atlasIndex, objectTilesTotal, /*out*/atlasIndex);
+                float4 atlasRect = GetTextureRect(atlasIndex, objectTilesAxis);
+                g_ObjectToAtlasProperties[i].atlas_ST = GetUVToAtlasScaleOffset(atlasRect) / (float) g_atlasAxisSize;
+            }
+        }
+        AllMemoryBarrierWithGroupSync();
+    }
 }
 
 

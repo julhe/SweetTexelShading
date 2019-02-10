@@ -8,14 +8,20 @@ public class CompactDeferredAsset : RenderPipelineAsset
     private static readonly string m_PipelineFolder = "Assets/CompactDeferred";
     private static readonly string m_AssetName = "CompactDeferred.asset";
     private static readonly string m_noisePath = "CompactDeferred.asset";
-    public ComputeShader resolveShader;
-    public Shader resolveBlitShader;
+    [Range(1, 64)]
+    public int froxelsX = 5, froxelsY = 3, froxelsZ = 7;
 
+    public float NearCluster = 1f;
+    public ComputeShader clusteredLightning;
+
+    public Shader resolveBlitShader;
+    public bool UncompressedGBuffer = false;
     [Range(0.5f, 2f)] public float RenderScale = 1f;
 
     public TexelSpaceDebugMode debugPass = TexelSpaceDebugMode.None;
     public float memoryConsumption;
     public Texture2D[] dither;
+    public Texture2D BlueYellowRedGradient;
     protected override IRenderPipeline InternalCreatePipeline()
     {
         dither = Resources.LoadAll<Texture2D>("Noise16pxLDR");

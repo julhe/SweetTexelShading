@@ -42,6 +42,56 @@ struct ObjectToAtlasProperties
 	float4 atlas_ST; // scale and offset to transform uv coords into atlas space
 };
 
+float max3(float x, float y, float z)
+{
+    return max(x, max(y, z));
+}
+
+sampler2D g_Dither;
+float3 ScreenSpaceDither(float2 vScreenPos, float targetRange)
+{
+	//return 0;
+#if 1
+    float3 blueNoise = tex2D(g_Dither, vScreenPos / 32.0);
+    blueNoise /= targetRange;
+    return blueNoise;
+	//blueNoise = mad(blueNoise, 2.0f, -1.0f);
+	//blueNoise = sign(blueNoise)*(1.0f - sqrt(1.0f - abs(blueNoise)));
+	//blueNoise /= targetRange * 2;
+	//return blueNoise;
+
+#else
+	// Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR
+//float3 vDither = float3( dot( float2( 171.0, 231.0 ), vScreenPos.xy + iTime ) );
+	float3 vDither = (dot(float2(171.0, 231.0), vScreenPos.xy + _Time.y * 0));
+	vDither.rgb = frac(vDither.rgb / float3(103.0, 71.0, 97.0)) ;
+	return vDither.rgb / targetRange; //note: looks better without 0.375...
+
+									  //note: not sure why the 0.5-offset is there...
+									  //vDither.rgb = fract( vDither.rgb / float3( 103.0, 71.0, 97.0 ) ) - float3( 0.5, 0.5, 0.5 );
+									  //return (vDither.rgb / 255.0) * 0.375;
+#endif
+
+}
+
+#define TONEMAP_VISTA
+float3 SimpleTonemap(float3 c)
+{
+    #ifdef TONEMAP_VISTA
+        return c * rcp(max3(c.r, c.g, c.b) + 1.0);
+    #else
+        return c;
+    #endif
+}
+float3 SimpleTonemapInverse(float3 c)
+{
+    #ifdef TONEMAP_VISTA
+        return c * rcp(1.0- max3(c.r, c.g, c.b));
+    #else
+        return c;
+    #endif
+}
+
 //--------utility--------
 
 //source: https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/

@@ -43,7 +43,7 @@ Shader "Unlit/SimpleUnlit"
 				struct appdata
 			{
 				float4 vertex : POSITION;
-				float2 uv : TEXCOORD0;
+				float2 uv : TEXCOORD1;
 			};
 
 			struct v2f
@@ -69,7 +69,7 @@ Shader "Unlit/SimpleUnlit"
 
 				// classic mipmap-level calculation
 				float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
-				rawMipMapLevel = min(log2(rawMipMapLevel) * 0.5, g_AtlasSizeExponent);
+				rawMipMapLevel = min(log2(rawMipMapLevel) * 1, g_AtlasSizeExponent);
 
 				uint clusterID = floor(i.uv.x * 8 *8 + i.uv.y * 8);
 				uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
@@ -129,9 +129,15 @@ Shader "Unlit/SimpleUnlit"
 			float g_atlasMorph;
 			half4 frag(v2f i) : SV_Target
 			{
+				//return float4(g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST.xy, 0, 0);
 				float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
-				float4 atlasB = tex2D(g_VistaAtlas, i.uv);
-				
+				atlasA.rgb /= atlasA.a;
+				atlasA.rgb = SimpleTonemapInverse(atlasA.rgb);
+
+				float4 atlasB = tex2D(g_VistaAtlas, i.uv);		
+				atlasB.rgb /= atlasB.a;
+				atlasB.rgb = SimpleTonemapInverse(atlasB.rgb);
+
 				return lerp(atlasA, atlasB, g_atlasMorph);
 			}
 			ENDCG
@@ -151,9 +157,11 @@ Shader "Unlit/SimpleUnlit"
 			// make fog work
 			#pragma multi_compile_fog
 			#pragma multi_compile_fwdbase
+			#pragma multi_compile _ TRIANGLE_CULLING
 			#include "UnityCG.cginc"
 			#include "UnityPBSLighting.cginc"
 			#include "AutoLight.cginc"
+
 #define UNITY_PASS_FORWARDBASE
 			// vertex-to-fragment interpolation data
 			// no lightmaps:
@@ -254,7 +262,7 @@ Shader "Unlit/SimpleUnlit"
 			}
 
 
-#define FULLSCREEN_TRIANGLE_CULLING
+//#define FULLSCREEN_TRIANGLE_CULLING
 			float3 g_CameraPositionWS;
 			StructuredBuffer<uint> g_PrimitiveVisibility;
 
@@ -262,28 +270,37 @@ Shader "Unlit/SimpleUnlit"
 			[maxvertexcount(3)]
 			void geom(triangle v2f_surf p[3], inout TriangleStream<v2f_surf> triStream, in uint primID : SV_PrimitiveID)
 			{
+				float visiblity = 1;
+#ifdef TRIANGLE_CULLING
+				
 #ifdef FULLSCREEN_TRIANGLE_CULLING
 				
 				uint baseIndex, subIndex;
 				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
 
 				uint visiblity = g_PrimitiveVisibility[baseIndex] & (1 << subIndex);
+
 #else
-				float3 averagePos =
+				// backface culling
+				float3 faceCenterWS =
 					float3(p[0].tSpace0.w, p[0].tSpace1.w, p[0].tSpace2.w) +
 					float3(p[1].tSpace0.w, p[1].tSpace1.w, p[1].tSpace2.w) +
 					float3(p[2].tSpace0.w, p[2].tSpace1.w, p[2].tSpace2.w);
-				averagePos /= 3.0;
-				float3 viewDir = normalize((averagePos) -g_CameraPositionWS);
-				float3 averageNormal = normalize(p[0].tSpace0 + p[1].tSpace0 + p[2].tSpace0);
+				faceCenterWS /= 3.0;
+				float3 viewDirWS = normalize(_WorldSpaceCameraPos - faceCenterWS);
+				float3 faceNormalWS = float3(p[0].tSpace0.z, p[0].tSpace1.z, p[0].tSpace2.z);
+				//float3 averageNormal = normalize(p[0].tSpace0 + p[1].tSpace0 + p[2].tSpace0);
 
-				float visiblity = dot(averageNormal, viewDir);
+				visiblity = dot(faceNormalWS, viewDirWS);
 #endif
-				if (visiblity != 0)
+#endif
+				if (visiblity > 0)
 				{
 					v2f_surf p0 = p[0];
 					v2f_surf p1 = p[1];
 					v2f_surf p2 = p[2];
+
+#ifdef DIALATE_TRIANGLES
 					// do conservative raserization 
 					// source: https://github.com/otaku690/SparseVoxelOctree/blob/master/WIN/SVO/shader/voxelize.geom.glsl
 					//Next we enlarge the triangle to enable conservative rasterization
@@ -319,14 +336,20 @@ Shader "Unlit/SimpleUnlit"
 					p0.pos.xy += pl*normalize((e2.xy / dot(e2.xy, n0.xy)) + (e0.xy / dot(e0.xy, n2.xy)));
 					p1.pos.xy += pl*normalize((e0.xy / dot(e0.xy, n1.xy)) + (e1.xy / dot(e1.xy, n0.xy)));
 					p2.pos.xy += pl*normalize((e1.xy / dot(e1.xy, n2.xy)) + (e2.xy / dot(e2.xy, n1.xy)));
-
+#endif
 					triStream.Append(p0);
 					triStream.Append(p1);
 					triStream.Append(p2);
 				}
 
+
 				triStream.RestartStrip();
 			}
+
+#define MAX_LIGHTS 48
+			float4 g_LightsOriginRange[MAX_LIGHTS];
+			float4 g_LightColorAngle[MAX_LIGHTS];
+			int g_LightsCount;
 
 			float3 g_LightDir, _EmissionColor;
 			float _Smoothness;
@@ -412,7 +435,47 @@ Shader "Unlit/SimpleUnlit"
 					gi);
 
 				outColor += s.Emission;
-				return float4(outColor, 1);
+
+				half oneMinusReflectivity;
+				half3 specColor;
+				s.Albedo = EnergyConservationBetweenDiffuseAndSpecular(s.Albedo, s.Specular, /*out*/ oneMinusReflectivity);
+
+				gi.indirect.diffuse = 0;
+				gi.indirect.specular = 0;
+				[loop]
+				for (int i = 0; i < g_LightsCount; i++)
+				{
+
+					float3 lightOrigin = g_LightsOriginRange[i].xyz;
+					float lightRange = g_LightsOriginRange[i].w;
+
+					float3 lightRay = lightOrigin - worldPos;
+					float lightRayLengthSqr = dot(lightRay, lightRay);
+					gi.light.color = g_LightColorAngle[i];
+					float lightAtten = saturate(lightRange - length(lightRay));
+
+
+					if (lightAtten < 0.001)
+						continue;
+
+					gi.light.dir = normalize(lightRay);
+					giInput.light = gi.light;
+
+					outColor += UNITY_BRDF_PBS(
+						s.Albedo,
+						s.Specular,
+						oneMinusReflectivity,
+						s.Smoothness,
+						s.Normal,
+						worldViewDir,
+						gi.light,
+						gi.indirect) * lightAtten;
+				}
+
+		
+			//	outColor += ScreenSpaceDither(i.pos, 1024.0);
+				outColor = max(outColor, 0);
+				return float4(SimpleTonemap(outColor), 1);
 			}
 			ENDCG
 		}
