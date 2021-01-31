@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\Users\Julian\AppData\Local\JetBrains\Rider2020.3\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\Julian\AppData\Local\JetBrains\Rider2020.3\resharper-host\Local\Transient\Rider\v203\SolutionCaches\_SweetTexelShading.-1418677791.00" t="ExcludeRecursive" />
+    <e p="C:\Users\Julian\wkspaces\PERSONAL\SweetTexelShading" t="IncludeRecursive">
+      <e p="Assembly-CSharp.csproj" t="IncludeRecursive" />
+      <e p="Assets" t="Include">
+        <e p="ClusteredLightning" t="Include">
+          <e p="ClusteredLightning.cginc" t="Include" />
+          <e p="ClusteredLightning.compute" t="Include" />
+          <e p="ClusteredLightning.cs" t="Include" />
+          <e p="ReadDebugInfo.cs" t="Include" />
+        </e>
+        <e p="CompactDeferred" t="Include">
+          <e p="CompactDeferred.cs" t="Include" />
+          <e p="CompactDeferredAsset.cs" t="Include" />
+          <e p="Shader" t="Include">
+            <e p="CompactDeferred Utility.cginc" t="Include" />
+            <e p="CompactDeferred.cginc" t="Include" />
+            <e p="CompactDeferred.shader" t="Include" />
+            <e p="DeferredShadingFullscreen.shader" t="Include" />
+          </e>
+        </e>
+        <e p="GGX LUT Generator" t="Include">
+          <e p="GGXLutGen.cs" t="Include" />
+        </e>
+        <e p="SimpleForward" t="Include">
+          <e p="SimpleForward.cs" t="Include" />
+          <e p="SimpleForward.shader" t="Include" />
+          <e p="SimpleForwardAsset.cs" t="Include" />
+        </e>
+        <e p="Skyboxes" t="Include">
+          <e p="readme.txt" t="Include" />
+        </e>
+        <e p="SponzaPBR_Textures" t="Include">
+          <e p="copyright.txt" t="Include" />
+        </e>
+        <e p="TestingStuff" t="Include">
+          <e p="AutoRotation.cs" t="Include" />
+          <e p="GGXTest.shader" t="Include" />
+          <e p="PlaceRandomLights.cs" t="Include" />
+          <e p="TranslateOverTime.cs" t="Include" />
+        </e>
+        <e p="TexelSpaceRenderLoop" t="Include">
+          <e p="BasicRenderpipeline.cs" t="Include" />
+          <e p="BasicRenderpipelineAsset.cs" t="Include" />
+          <e p="NewSurfaceShader.shader" t="Include" />
+          <e p="Shader" t="Include">
+            <e p="EvaluateCoverage.shader" t="Include" />
+            <e p="Resolve.compute" t="Include" />
+            <e p="SimpleUnlit.shader" t="Include" />
+            <e p="TexelShading.cginc" t="Include" />
+          </e>
+          <e p="TexelSpaceRenderHelper.cs" t="Include" />
+        </e>
+        <e p="UnityChan" t="Include">
+          <e p="license.txt" t="Include" />
+          <e p="Models" t="Include">
+            <e p="UnityChanShader" t="Include">
+              <e p="Shader" t="Include">
+                <e p="Unitychan_chara_akarami_blend.shader" t="Include" />
+                <e p="Unitychan_chara_eye.shader" t="Include" />
+                <e p="Unitychan_chara_eye_blend.shader" t="Include" />
+                <e p="Unitychan_chara_eyelash_blend.shader" t="Include" />
+                <e p="Unitychan_chara_fuku.shader" t="Include" />
+                <e p="Unitychan_chara_fuku_ds.shader" t="Include" />
+                <e p="Unitychan_chara_hada.shader" t="Include" />
+                <e p="Unitychan_chara_hada_blend.shader" t="Include" />
+                <e p="Unitychan_chara_hair.shader" t="Include" />
+                <e p="Unitychan_chara_hair_ds.shader" t="Include" />
+              </e>
+            </e>
+          </e>
+          <e p="Scripts" t="Include">
+            <e p="CameraController.cs" t="Include" />
+            <e p="FaceUpdate.cs" t="Include" />
+            <e p="IdleChanger.cs" t="Include" />
+            <e p="SceneLoader.cs" t="Include" />
+            <e p="ThirdPersonCamera.cs" t="Include" />
+            <e p="UnityChanControlScriptWithRgidBody.cs" t="Include" />
+          </e>
+          <e p="Stage" t="Include">
+            <e p="Shader" t="Include">
+              <e p="AlphaMask.shader" t="Include" />
+            </e>
+          </e>
+        </e>
+      </e>
+      <e p="obj" t="ExcludeRecursive" />
+      <e p="Packages" t="ExcludeRecursive" />
+      <e p="SweetTexelShading.sln" t="IncludeFlat" />
+      <e p="Temp\bin" t="ExcludeRecursive" />
+    </e>
+  </component>
+</project>

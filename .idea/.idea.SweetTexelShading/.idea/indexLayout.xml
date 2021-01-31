@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelUserStore">
+    <attachedFolders />
+    <explicitIncludes>
+      <Path>Library/PackageCache/com.unity.ads@2.0.8</Path>
+      <Path>Library/PackageCache/com.unity.analytics@3.2.3</Path>
+      <Path>Library/PackageCache/com.unity.collab-proxy@1.2.15</Path>
+      <Path>Library/PackageCache/com.unity.incrementalcompiler@0.0.42-preview.19</Path>
+      <Path>Library/PackageCache/com.unity.package-manager-ui@2.0.13</Path>
+      <Path>Library/PackageCache/com.unity.purchasing@2.2.1</Path>
+      <Path>Library/PackageCache/com.unity.render-pipelines.core@4.10.0-preview</Path>
+      <Path>Library/PackageCache/com.unity.textmeshpro@1.4.1</Path>
+      <Path>Packages</Path>
+      <Path>ProjectSettings</Path>
+    </explicitIncludes>
+    <explicitExcludes>
+      <Path>.git</Path>
+      <Path>.idea</Path>
+      <Path>.vscode</Path>
+      <Path>Library</Path>
+      <Path>Logs</Path>
+      <Path>Packages_</Path>
+      <Path>Temp</Path>
+      <Path>UserSettings</Path>
+      <Path>obj</Path>
+    </explicitExcludes>
+  </component>
+</project>
