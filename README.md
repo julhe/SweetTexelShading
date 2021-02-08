@@ -1,5 +1,5 @@
 # SweetTexelShading
-Texel-Shading with Unity's ScriptableRenderPipeline
+Texel-Shading with Unity's ScriptableRenderPipeline for Unity 2018.4.x.
 
 ![Base](GitHubPage/base.png)
 # What is this?
