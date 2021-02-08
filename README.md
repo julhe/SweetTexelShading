@@ -24,5 +24,6 @@ Texel shading could potentially solve both problems by allowing to render shadin
  All of this happens on the GPU so far! :)
 
 # Futher Research
-* Use per triangle UVs for robout unwraping. (See http://ptex.us/ptexpaper.html)
+* Pack atlas per triangle packing for efficient atlas use. (See http://ptex.us/ptexpaper.html)
+* Sort Objects/Triangles in parallel.
 * ...
