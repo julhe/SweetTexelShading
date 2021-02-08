@@ -11,8 +11,8 @@
     <changedPaths>
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/Resolve.compute" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/TexelShading.cginc" />
-      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/SimpleUnlit.shader" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/SimpleUnlit.shader" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1nyiXoWmayieCMZjDYmaeuXdErU" />
@@ -55,7 +55,7 @@
       <updated>1612368775109</updated>
       <workItem from="1612368788271" duration="4394000" />
       <workItem from="1612533087922" duration="3839000" />
-      <workItem from="1612780328899" duration="1201000" />
+      <workItem from="1612780328899" duration="1808000" />
     </task>
     <servers />
   </component>
