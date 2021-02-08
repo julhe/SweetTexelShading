@@ -126,7 +126,7 @@ Material:
     - _Redify: 1
     - _Roughness: 0.74
     - _SCREENSPACE_TANGENT: 0
-    - _Smoothness: 0.6
+    - _Smoothness: 0.156
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1

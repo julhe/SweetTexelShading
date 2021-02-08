@@ -5,8 +5,8 @@
 #define PRIMITIVE_CLUSTER_SIZE 8.0
 #define COMPUTE_COVERAGE_TILE_SIZE 8
 #define ATLAS_TILE_SIZE 128
-#define ATLAS_OBJECT_SIZEEXPONENT_MIN 7 // 7^12 = ATLAS_TILE_SIZE, the minmal space an object can be in the atlas
-#define ATLAS_OBJECT_SIZEEXPONENT_MAX 12 // 2^12 = 4096, the maximal size an object can be in the atlas
+#define ATLAS_OBJECT_SIZEEXPONENT_MIN 7 // 2^7 = ATLAS_TILE_SIZE, the minmal space an object can be in the atlas
+#define ATLAS_OBJECT_SIZEEXPONENT_MAX 11 // 2^12 = 4096, the maximal size an object can be in the atlas
 #define SINGLE_ROW_THREAD_SIZE 64
 #define BLOCK_THREAD_SIZE 8
 float g_AtlasSizeExponent;
@@ -120,6 +120,38 @@ uint Compact1By1(uint x)
 
 uint DecodeMorton2X(uint code) { return Compact1By1(code >> 0); }
 uint DecodeMorton2Y(uint code) { return Compact1By1(code >> 1); }
+
+
+// ACES Tonemapping
+//
+// Base code sourced from Matt Pettineo's and Stephen Hill's work at https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+// sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+static const float3x3 ACESInputMat = float3x3(
+    0.59719, 0.35458, 0.04823,
+    0.07600, 0.90834, 0.01566,
+    0.02840, 0.13383, 0.83777
+);
+
+// ODT_SAT => XYZ => D60_2_D65 => sRGB
+static const float3x3 ACESOutputMat = float3x3(
+     1.60475, -0.53108, -0.07367,
+    -0.10208,  1.10813, -0.00605,
+    -0.00327, -0.07276,  1.07602
+);
+
+float3 RRTAndODTFit(float3 v)
+{
+	float3 a = v * (v + 0.0245786f) - 0.000090537f;
+	float3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
+	return a / b;
+}
+
+
+float3 TonemappingACES(float3 colorLinear)
+{
+	return saturate(mul(ACESOutputMat,RRTAndODTFit(colorLinear)));
+}
+
 
 #define TEXEL_SHADING_INCLUDE
 #endif

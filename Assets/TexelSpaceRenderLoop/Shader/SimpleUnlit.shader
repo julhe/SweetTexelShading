@@ -43,7 +43,7 @@ Shader "TexelShading/Standard"
 				struct appdata
 			{
 				float4 vertex : POSITION;
-				float2 uv : TEXCOORD1;
+				float2 uv : TEXCOORD1; // use lightmap uv
 			};
 
 			struct v2f
@@ -99,7 +99,7 @@ Shader "TexelShading/Standard"
 			struct appdata
 			{
 				float4 pos : POSITION;
-				float2 uv : TEXCOORD1;
+				float2 uv : TEXCOORD1; // use lightmap uv
 			};
 
 			struct v2f
@@ -138,7 +138,11 @@ Shader "TexelShading/Standard"
 				atlasB.rgb /= atlasB.a;
 				atlasB.rgb = SimpleTonemapInverse(atlasB.rgb);
 
-				return lerp(atlasA, atlasB, g_atlasMorph);
+
+				float4 finalColor = lerp(atlasA, atlasB, g_atlasMorph);
+
+				finalColor.rgb = TonemappingACES(finalColor.rgb);
+				return finalColor;
 			}
 			ENDCG
 		}
@@ -215,7 +219,8 @@ Shader "TexelShading/Standard"
 				UNITY_TRANSFER_INSTANCE_ID(v, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-				float2 atlasCoord = v.texcoord1;
+				// clamp uv map to prevent bad uv-unwraping from messing up the atlas and/or massively decrease the performance
+				float2 atlasCoord = saturate(v.texcoord1);
 				float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				atlasCoord.y = 1 - atlasCoord.y;
@@ -452,10 +457,13 @@ Shader "TexelShading/Standard"
 					float3 lightRay = lightOrigin - worldPos;
 					float lightRayLengthSqr = dot(lightRay, lightRay);
 					gi.light.color = g_LightColorAngle[i];
-					float lightAtten = saturate(lightRange - length(lightRay));
+					float lightAttenInvSqr = 1.0 / lightRayLengthSqr;
+					float lightAttenByRangeLimit = 1.0 - (saturate(lightRayLengthSqr / (lightRange * lightRange))); // limit with linear falloff
+
+					lightAttenInvSqr *= lightAttenByRangeLimit;
 
 
-					if (lightAtten < 0.001)
+					if (lightAttenInvSqr < 0.00001)
 						continue;
 
 					gi.light.dir = normalize(lightRay);
@@ -469,7 +477,7 @@ Shader "TexelShading/Standard"
 						s.Normal,
 						worldViewDir,
 						gi.light,
-						gi.indirect) * lightAtten;
+						gi.indirect) * lightAttenInvSqr;
 				}
 
 		

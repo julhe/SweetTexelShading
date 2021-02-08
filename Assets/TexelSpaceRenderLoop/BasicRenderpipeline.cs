@@ -2,10 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.XR;
+using Object = System.Object;
 
 class ComputeBufferWithData<T>
 {
@@ -183,7 +185,7 @@ public class BasicRenderpipeline : RenderPipeline
                 target_atlasA = !target_atlasA;
                 CopyDataToPreFrameBuffer();
                 SetupRenderBuffers();
-                RenderVisiblityPass(); // demiter pixel coverage 
+                RenderVisiblityPass(); // get pixel coverage 
                 PackAtlas(); // Pack new Atlas
                 RenderTexelShading(); // render texel space
                 
@@ -206,6 +208,7 @@ public class BasicRenderpipeline : RenderPipeline
     }
     void SetupRenderBuffers()
     {
+        LogVerbose("SetupRenderBuffers...");
         CommandBuffer cmd = CommandBufferPool.Get("SetupBuffers");
         int screen_x = CURRENT_CAMERA.pixelWidth;
         int screen_y = CURRENT_CAMERA.pixelHeight;
@@ -233,6 +236,7 @@ public class BasicRenderpipeline : RenderPipeline
 
     void SetupShaderGlobals()
     {
+        LogVerbose("SetupShaderGlobals...");
         CommandBuffer cmd = CommandBufferPool.Get("SetupShaderGlobals");
         cmd.SetGlobalFloat("g_AtlasResolutionScale", m_asset.atlasResolutionScale / m_asset.visibilityPassDownscale);
         float lerpFactor = Mathf.Clamp01(timeSinceLastRender / (1f / m_asset.atlasRefreshFps)); //TODO: clamp should't been neccesary
@@ -254,8 +258,8 @@ public class BasicRenderpipeline : RenderPipeline
     List<Vector4> g_LightsOriginRange = new List<Vector4>();
     List<Vector4> g_LightColorAngle = new List<Vector4>();
     private const int MAX_LIGHTS = 48;
-    public void SetupLightArray(CommandBuffer cmd, CullResults m_CullResults)
-    {
+    public void SetupLightArray(CommandBuffer cmd, CullResults m_CullResults) {
+        LogVerbose("setup light array...");
         var visibleLights = m_CullResults.visibleLights;
         g_LightsOriginRange.Clear();
         g_LightColorAngle.Clear();
@@ -425,6 +429,7 @@ public class BasicRenderpipeline : RenderPipeline
     
     void CopyDataToPreFrameBuffer()
     {
+       // LogVerbose("CopyDataToPreFrameBuffer...");
         CommandBuffer cmd = CommandBufferPool.Get("CopyDataToPreFrameBuffer");
 
         cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CopyDataToPreFrameBuffer, "g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
@@ -442,6 +447,7 @@ public class BasicRenderpipeline : RenderPipeline
     
     void RenderVista()
     {
+        //LogVerbose("RenderVista...");
         if (m_asset.debugPass == TexelSpaceDebugMode.None)
         {
             CommandBuffer cmd = CommandBufferPool.Get("Render Vista");
@@ -472,6 +478,7 @@ public class BasicRenderpipeline : RenderPipeline
 
     void RenderOpaque(ShaderPassName passName, SortFlags sortFlags, RendererConfiguration rendererConfiguration = RendererConfiguration.None)
     {
+        LogVerbose("RenderOpaque...");
         var opaqueDrawSettings = new DrawRendererSettings(CURRENT_CAMERA, passName);
         opaqueDrawSettings.sorting.flags = sortFlags;
         opaqueDrawSettings.rendererConfiguration = rendererConfiguration;
@@ -485,6 +492,7 @@ public class BasicRenderpipeline : RenderPipeline
     }
     void ReleaseBuffers()
     {
+        LogVerbose("ReleaseBuffers...");
         CommandBuffer cmd = CommandBufferPool.Get("ReleaseBuffers");
         cmd.ReleaseTemporaryRT(g_PrimitiveVisibilityID);
         m_context.ExecuteCommandBuffer(cmd);
@@ -498,13 +506,14 @@ public class BasicRenderpipeline : RenderPipeline
         visibleObjects.Add(texelSpaceRenderHelper);
     }
 
-    public const int ATLAS_TILE_SIZE = 128;
+
     int atlasAxisSize;
 
     //TODO: reuse depthbuffer from visibility pass for vista pass
     //TODO: check if atlas is acutally large enough
     void PackAtlas()
     {
+        LogVerbose("PackAtlas...");
         CommandBuffer cmd = CommandBufferPool.Get("PackAtlas");
         atlasAxisSize = m_asset.maximalAtlasSizePixel;
 
@@ -524,6 +533,12 @@ public class BasicRenderpipeline : RenderPipeline
         visibleObjects.Clear();
         m_context.ExecuteCommandBuffer(cmd);
         CommandBufferPool.Release(cmd);
+    }
+    
+    void LogVerbose(Object obj) {
+#if LOG_VERBOSE
+        Debug.Log(obj);
+#endif
     }
 }
 

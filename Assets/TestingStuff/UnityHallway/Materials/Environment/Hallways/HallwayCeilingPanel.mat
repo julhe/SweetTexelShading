@@ -5,9 +5,10 @@ Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_Name: HallwayCeilingPanel
-  m_Shader: {fileID: 4800000, guid: 745354eac74d32e40a508c37b061878a, type: 3}
+  m_Shader: {fileID: 4800000, guid: 7f27f82cf9f984543bc6b6e423fd8164, type: 3}
   m_ShaderKeywords: _ADAM_CUSTOM_META _NORMALMAP _SPECGLOSSMAP
   m_LightmapFlags: 1
   m_EnableInstancingVariants: 0

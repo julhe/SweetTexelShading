@@ -9,8 +9,21 @@
   </component>
   <component name="IdeDocumentHistory">
     <changedPaths>
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/Resolve.compute" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/TexelShading.cginc" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/SimpleUnlit.shader" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
     </changedPaths>
+  </component>
+  <component name="ProjectId" id="1nyiXoWmayieCMZjDYmaeuXdErU" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="Discover.Launch.Via.Unity" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
   </component>
   <component name="RunManager" selected="Attach to Unity Editor.Attach to Unity Editor">
     <configuration name="Attach to Unity Editor &amp; Play" type="UNITY_DEBUG_RUN_CONFIGURATION" factoryName="UNITY_ATTACH_AND_PLAY" show_console_on_std_err="false" show_console_on_std_out="false" port="50000" address="localhost">
@@ -32,9 +45,20 @@
       <method v="2" />
     </configuration>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="47220441-7e33-463e-942f-5db9c911e7b2" name="Default Changelist" comment="" />
+      <created>1612368775109</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1612368775109</updated>
+      <workItem from="1612368788271" duration="4394000" />
+      <workItem from="1612533087922" duration="3839000" />
+      <workItem from="1612780328899" duration="1201000" />
+    </task>
     <servers />
   </component>
   <component name="UnityProjectConfiguration" hasMinimizedUI="true" />
-  <component name="UnityUnitTestConfiguration" currentTestLauncher="Both" />
+  <component name="UnityUnitTestConfiguration" currentTestLauncher="EditMode" />
 </project>
