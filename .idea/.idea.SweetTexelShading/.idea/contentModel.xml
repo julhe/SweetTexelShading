@@ -25,6 +25,7 @@
         <e p="GGX LUT Generator" t="Include">
           <e p="GGXLutGen.cs" t="Include" />
         </e>
+        <e p="SceneCameraController.cs" t="Include" />
         <e p="SimpleForward" t="Include">
           <e p="SimpleForward.cs" t="Include" />
           <e p="SimpleForward.shader" t="Include" />
@@ -42,6 +43,7 @@
           <e p="PlaceRandomLights.cs" t="Include" />
           <e p="TranslateOverTime.cs" t="Include" />
         </e>
+        <e p="TexelSpaceGUI.cs" t="Include" />
         <e p="TexelSpaceRenderLoop" t="Include">
           <e p="BasicRenderpipeline.cs" t="Include" />
           <e p="BasicRenderpipelineAsset.cs" t="Include" />

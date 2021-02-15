@@ -11,8 +11,13 @@
     <changedPaths>
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/Resolve.compute" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/TexelShading.cginc" />
-      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/SimpleUnlit.shader" />
+      <option value="$PROJECT_DIR$/Assets/FreeCamera.cs" />
+      <option value="$PROJECT_DIR$/Assets/CameraController.cs" />
+      <option value="$PROJECT_DIR$/Assets/CameraControllerSceneViewStyle.cs" />
+      <option value="$PROJECT_DIR$/Assets/SceneCameraController.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceGUI.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1nyiXoWmayieCMZjDYmaeuXdErU" />
@@ -55,7 +60,9 @@
       <updated>1612368775109</updated>
       <workItem from="1612368788271" duration="4394000" />
       <workItem from="1612533087922" duration="3839000" />
-      <workItem from="1612780328899" duration="1808000" />
+      <workItem from="1612780328899" duration="3063000" />
+      <workItem from="1613067540790" duration="6235000" />
+      <workItem from="1613332605152" duration="1889000" />
     </task>
     <servers />
   </component>
