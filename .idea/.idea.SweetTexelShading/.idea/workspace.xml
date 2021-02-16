@@ -7,6 +7,9 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/FA2C88AE-484C-4CEA-86C7-CAFC0ADAA6F0/ef/ae05ca9e/RendererConfiguration.cs" root0="SKIP_HIGHLIGHTING" />
+  </component>
   <component name="IdeDocumentHistory">
     <changedPaths>
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/Shader/Resolve.compute" />
@@ -16,8 +19,8 @@
       <option value="$PROJECT_DIR$/Assets/CameraController.cs" />
       <option value="$PROJECT_DIR$/Assets/CameraControllerSceneViewStyle.cs" />
       <option value="$PROJECT_DIR$/Assets/SceneCameraController.cs" />
-      <option value="$PROJECT_DIR$/Assets/TexelSpaceGUI.cs" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceGUI.cs" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1nyiXoWmayieCMZjDYmaeuXdErU" />
@@ -26,6 +29,8 @@
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="DebuggerViewTab_PTCS_FirstProportionKey" value="0.35014325" />
+    <property name="DebuggerViewTab_PTCS_LastProportionKey" value="0.0" />
     <property name="Discover.Launch.Via.Unity" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
@@ -63,6 +68,9 @@
       <workItem from="1612780328899" duration="3063000" />
       <workItem from="1613067540790" duration="6235000" />
       <workItem from="1613332605152" duration="1889000" />
+      <workItem from="1613418326044" duration="1262000" />
+      <workItem from="1613423662561" duration="769000" />
+      <workItem from="1613509392691" duration="4175000" />
     </task>
     <servers />
   </component>

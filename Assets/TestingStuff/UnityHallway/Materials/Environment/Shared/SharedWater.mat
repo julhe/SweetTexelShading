@@ -80,7 +80,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _ROUGHNESS_MAPS: 0
-    - _Smoothness: 1
+    - _Smoothness: 0.751
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1

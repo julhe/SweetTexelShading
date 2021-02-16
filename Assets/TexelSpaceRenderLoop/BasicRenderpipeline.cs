@@ -196,6 +196,22 @@ public class BasicRenderpipeline : RenderPipeline
             ValidateAtlasTextureParameters(); 
 
             // TODO: reuse uv output to skip rendering objects a third time in VistaPass
+            
+            CommandBuffer createCameraRT = CommandBufferPool.Get("Create Camera RT");
+            createCameraRT.GetTemporaryRT(
+                g_CameraTarget, 
+                SCREEN_X, 
+                SCREEN_Y, 
+                24, 
+                FilterMode.Bilinear, 
+                RenderTextureFormat.ARGB32, 
+                RenderTextureReadWrite.sRGB, 
+                Mathf.NextPowerOfTwo(m_asset.MSSALevel));
+            
+            createCameraRT.SetRenderTarget(g_CameraTarget);
+            createCameraRT.ClearRenderTarget(true, true, Color.clear);
+            m_context.ExecuteCommandBuffer(createCameraRT);
+            
             if (shouldUpdateAtlas)
             {
                 //Debug.Log(DateTime.Now.ToString("hh.mm.ss.ffffff") + "render" + timeSinceLastRender.ToString());
@@ -279,6 +295,10 @@ public class BasicRenderpipeline : RenderPipeline
                 m_context.ExecuteCommandBuffer(cmd2);
 
                 cmd2.Clear();
+                
+                
+
+                
                 // optional debug pass
                 switch (m_asset.debugPass)
                 {
@@ -301,7 +321,7 @@ public class BasicRenderpipeline : RenderPipeline
                             SCREEN_Y / 8,
                             1);
 
-                        cmd2.Blit(debugView, BuiltinRenderTextureType.CameraTarget);
+                        cmd2.Blit(debugView, g_CameraTarget);
                         cmd2.ReleaseTemporaryRT(debugView);
 
                         m_context.ExecuteCommandBuffer(cmd2);
@@ -372,40 +392,7 @@ public class BasicRenderpipeline : RenderPipeline
                 cmd4.SetGlobalVectorArray("g_LightsOriginRange", g_LightsOriginRange);
                 cmd4.SetGlobalVectorArray("g_LightColorAngle", g_LightColorAngle);
                 cmd4.SetGlobalInt("g_LightsCount", Mathf.Min(MAX_LIGHTS, visibleLights.Count));
-
-                //if (mainLightValid)
-                //{
-                //    cmd.SetGlobalVector("_WorldSpaceLightPos0", -mainLight.light.transform.forward);
-                //    cmd.SetGlobalColor("_LightColor0", mainLight.finalColor);
-                //}
-
-                //cmd.SetGlobalTexture("unity_SpecCube0", RenderSettings.customReflection);
-                //cmd.SetGlobalVector("unity_SpecCube0_HDR", Vector4.one);
-                //cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
-
-                //cmd.SetGlobalTexture("unity_SpecCube1", RenderSettings.customReflection);
-                //cmd.SetGlobalVector("unity_SpecCube1_HDR", Vector4.one);
-                //cmd.SetGlobalVector("unity_SpecCube1_ProbePosition", Vector4.zero);
-
-                var ambProbe = RenderSettings.ambientProbe;
-
-                //cmd.SetGlobalVector("unity_SHAr", new Vector4(ambProbe[0, 0], ambProbe[0, 1], ambProbe[0, 2], ambProbe[0, 3]));
-                //cmd.SetGlobalVector("unity_SHAg", new Vector4(ambProbe[1, 0], ambProbe[1, 1], ambProbe[1, 2], ambProbe[0, 3]));
-                //cmd.SetGlobalVector("unity_SHAb", new Vector4(ambProbe[2, 0], ambProbe[2, 1], ambProbe[2, 2], ambProbe[0, 3]));
-                //cmd.SetGlobalVector("unity_SHBr", new Vector4(ambProbe[0, 4], ambProbe[0, 5], ambProbe[0, 6], ambProbe[0, 7]));
-                //cmd.SetGlobalVector("unity_SHBg", new Vector4(ambProbe[1, 4], ambProbe[1, 5], ambProbe[1, 6], ambProbe[1, 7]));
-                //cmd.SetGlobalVector("unity_SHBb", new Vector4(ambProbe[2, 4], ambProbe[2, 5], ambProbe[2, 6], ambProbe[2, 7]));
-                //cmd.SetGlobalVector("unity_SHC" , new Vector4(ambProbe[0, 8], ambProbe[1, 8], ambProbe[2, 8], 0f));
-
-                if (m_CullResults.visibleReflectionProbes.Count > 0)
-                {
-
-
-                    // cmd.SetGlobalVector("unity_SpecCube0_ProbePosition", Vector4.zero);
-
-                    //    cmd.SetGlobalTexture("unity_SpecCube0", m_CullResults.visibleReflectionProbes[0].texture);
-                }
-
+                
                 cmd4.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
                 cmd4.SetGlobalBuffer(g_PrimitiveVisibilityID, g_PrimitiveVisibility);
                 cmd4.SetGlobalBuffer("g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
@@ -415,8 +402,7 @@ public class BasicRenderpipeline : RenderPipeline
                 RenderOpaque(m_TexelSpacePass, SortFlags.CommonOpaque, rendererConfiguration_shading);
 
                 cmd4.Clear();
-                if (m_asset.debugPass == TexelSpaceDebugMode.TexelShadingPass)
-                {
+                if (m_asset.debugPass == TexelSpaceDebugMode.TexelShadingPass){
                     cmd4.Blit(g_VistaAtlas_A, BuiltinRenderTextureType.CameraTarget);
                     m_context.ExecuteCommandBuffer(cmd4);
                 }
@@ -430,33 +416,25 @@ public class BasicRenderpipeline : RenderPipeline
             }
             visibleObjects.Clear();
 
-            //LogVerbose("RenderVista...");
-            if (m_asset.debugPass == TexelSpaceDebugMode.None)
-            {
-                CommandBuffer cmd6 = CommandBufferPool.Get("Render Vista");
-                cmd6.GetTemporaryRT(
-                    g_CameraTarget, 
-                    SCREEN_X, 
-                    SCREEN_Y, 
-                    24, 
-                    FilterMode.Bilinear, 
-                    RenderTextureFormat.ARGB32, 
-                    RenderTextureReadWrite.sRGB, 
-                    Mathf.NextPowerOfTwo(m_asset.MSSALevel));
+            // ===================================================================================================== 
+            // Render Vista + Finalize
+            // =====================================================================================================
+            
+            CommandBuffer cmdVista = CommandBufferPool.Get("Render Vista");
+            cmdVista.SetRenderTarget(g_CameraTarget);
+            m_context.ExecuteCommandBuffer(cmdVista);
+            cmdVista.Clear();
 
-                cmd6.SetRenderTarget(g_CameraTarget);
-                cmd6.ClearRenderTarget(true, false, Color.clear);
-                m_context.ExecuteCommandBuffer(cmd6);
-
-                RenderOpaque(m_VistaPass, SortFlags.CommonOpaque);  // render
+             if (m_asset.debugPass == TexelSpaceDebugMode.None){
+                RenderOpaque(m_VistaPass, SortFlags.CommonOpaque); // render vista
                 m_context.DrawSkybox(CURRENT_CAMERA);
-
-                cmd6.Clear();
-                cmd6.Blit(g_CameraTarget, BuiltinRenderTextureType.CameraTarget);
-                cmd6.ReleaseTemporaryRT(g_CameraTarget);
-                m_context.ExecuteCommandBuffer(cmd6);
-                CommandBufferPool.Release(cmd6);
             }
+
+            cmdVista.Blit(g_CameraTarget, BuiltinRenderTextureType.CameraTarget);
+            cmdVista.ReleaseTemporaryRT(g_CameraTarget);
+            m_context.ExecuteCommandBuffer(cmdVista);
+            CommandBufferPool.Release(cmdVista);
+            
         }
         if (shouldUpdateAtlas)
         {
