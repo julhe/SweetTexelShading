@@ -428,7 +428,12 @@ public class BasicRenderpipeline : RenderPipeline
              if (m_asset.debugPass == TexelSpaceDebugMode.None){
                 RenderOpaque(m_VistaPass, SortFlags.CommonOpaque); // render vista
                 m_context.DrawSkybox(CURRENT_CAMERA);
-            }
+             }
+             if (m_asset.debugPass == TexelSpaceDebugMode.TexelShadingPass){
+                 cmdVista.Blit(g_VistaAtlas_A, g_CameraTarget);
+                 m_context.ExecuteCommandBuffer(cmdVista);
+                 cmdVista.Clear();
+             }
 
             cmdVista.Blit(g_CameraTarget, BuiltinRenderTextureType.CameraTarget);
             cmdVista.ReleaseTemporaryRT(g_CameraTarget);

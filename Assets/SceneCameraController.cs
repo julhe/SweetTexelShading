@@ -1,12 +1,14 @@
-﻿using UnityEditor;
-#if UNITY_EDITOR
-using UnityEngine;
+﻿#if UNITY_EDITOR
+using UnityEditor;
 #endif
+using UnityEngine;
+
 
 public class SceneCameraController : MonoBehaviour
 {
     #region Class
 
+    #if UNITY_EDITOR
     [CustomEditor(typeof(SceneCameraController))]
     public class SceneCameraControllerEditor : Editor
     {
@@ -21,6 +23,7 @@ public class SceneCameraController : MonoBehaviour
             base.OnInspectorGUI();
         }
     }
+    #endif
 
     #endregion Class
 

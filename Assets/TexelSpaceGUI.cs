@@ -12,12 +12,13 @@ public class TexelSpaceGUI : MonoBehaviour {
 		asset.maximalAtlasSizeExponent = (int) GUILayout.HorizontalSlider(asset.maximalAtlasSizeExponent, 8, 13);
 		
 		GUILayout.Label($"Atlas refresh Rate: {asset.atlasRefreshFps}");
-		asset.atlasRefreshFps = (int) GUILayout.HorizontalSlider(asset.atlasRefreshFps, 1, 250);
+		asset.atlasRefreshFps = (int) GUILayout.HorizontalSlider(asset.atlasRefreshFps, 1, 1000);
 
 		GUILayout.Label($"Atlas Resolution Scale: {asset.atlasResolutionScale}");
 		asset.atlasResolutionScale =  GUILayout.HorizontalSlider(asset.atlasResolutionScale, 2000, 16000);
 
 		GUILayout.Label($"Debug Mode: {asset.debugPass}");
-		asset.debugPass = (TexelSpaceDebugMode) GUILayout.HorizontalSlider((int) asset.debugPass, 0, 4);
+		GUILayout.Label($"Increase Atlas refresh rate if flickering occurs!");
+		asset.debugPass = (TexelSpaceDebugMode) GUILayout.HorizontalSlider((int) asset.debugPass, 0, 5);
 	}
 }

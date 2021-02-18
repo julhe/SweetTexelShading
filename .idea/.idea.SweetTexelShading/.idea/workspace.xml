@@ -19,8 +19,8 @@
       <option value="$PROJECT_DIR$/Assets/CameraController.cs" />
       <option value="$PROJECT_DIR$/Assets/CameraControllerSceneViewStyle.cs" />
       <option value="$PROJECT_DIR$/Assets/SceneCameraController.cs" />
-      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceGUI.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1nyiXoWmayieCMZjDYmaeuXdErU" />
@@ -36,6 +36,14 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
   </component>
   <component name="RunManager" selected="Attach to Unity Editor.Attach to Unity Editor">
+    <configuration name="Standalone Player" type="RunUnityExe" factoryName="Unity Executable">
+      <option name="EXE_PATH" value="$PROJECT_DIR$/Build/DemoBuild\SuperFancyRenderLoop.exe" />
+      <option name="PROGRAM_PARAMETERS" value="" />
+      <option name="WORKING_DIRECTORY" value="C:\Users\Julian\wkspaces\PERSONAL\SweetTexelShading\Build\DemoBuild" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+      <method v="2" />
+    </configuration>
     <configuration name="Attach to Unity Editor &amp; Play" type="UNITY_DEBUG_RUN_CONFIGURATION" factoryName="UNITY_ATTACH_AND_PLAY" show_console_on_std_err="false" show_console_on_std_out="false" port="50000" address="localhost">
       <option name="allowRunningInParallel" value="false" />
       <option name="listenPortForConnections" value="false" />
@@ -70,7 +78,8 @@
       <workItem from="1613332605152" duration="1889000" />
       <workItem from="1613418326044" duration="1262000" />
       <workItem from="1613423662561" duration="769000" />
-      <workItem from="1613509392691" duration="4175000" />
+      <workItem from="1613509392691" duration="4823000" />
+      <workItem from="1613686424808" duration="703000" />
     </task>
     <servers />
   </component>

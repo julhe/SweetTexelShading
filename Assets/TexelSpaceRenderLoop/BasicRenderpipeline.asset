@@ -17,7 +17,7 @@ MonoBehaviour:
   maximalAtlasSizeExponent: 13
   atlasResolutionScale: 4096
   visibilityPassDownscale: 1
-  atlasRefreshFps: 250
+  atlasRefreshFps: 29
   MSSALevel: 1
   clearAtlasOnRefresh: 1
   TexelSpaceBackfaceCulling: 1
