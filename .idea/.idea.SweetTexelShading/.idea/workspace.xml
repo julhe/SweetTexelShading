@@ -19,8 +19,8 @@
       <option value="$PROJECT_DIR$/Assets/CameraController.cs" />
       <option value="$PROJECT_DIR$/Assets/CameraControllerSceneViewStyle.cs" />
       <option value="$PROJECT_DIR$/Assets/SceneCameraController.cs" />
-      <option value="$PROJECT_DIR$/Assets/TexelSpaceGUI.cs" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceGUI.cs" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1nyiXoWmayieCMZjDYmaeuXdErU" />
@@ -79,7 +79,7 @@
       <workItem from="1613418326044" duration="1262000" />
       <workItem from="1613423662561" duration="769000" />
       <workItem from="1613509392691" duration="4823000" />
-      <workItem from="1613686424808" duration="703000" />
+      <workItem from="1613686424808" duration="1439000" />
     </task>
     <servers />
   </component>
