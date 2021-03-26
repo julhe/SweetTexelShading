@@ -8,7 +8,9 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/FA2C88AE-484C-4CEA-86C7-CAFC0ADAA6F0/ef/ae05ca9e/RendererConfiguration.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/10564ED1-54D6-47E1-94BE-F4AEF8878649/a1/7ae3114f/ScriptableCullingParameters.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/10564ED1-54D6-47E1-94BE-F4AEF8878649/b8/d3e7ca66/CullingResults.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/FA2C88AE-484C-4CEA-86C7-CAFC0ADAA6F0/ef/ae05ca9e/RendererConfiguration.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="IdeDocumentHistory">
     <changedPaths>
@@ -19,8 +21,16 @@
       <option value="$PROJECT_DIR$/Assets/CameraController.cs" />
       <option value="$PROJECT_DIR$/Assets/CameraControllerSceneViewStyle.cs" />
       <option value="$PROJECT_DIR$/Assets/SceneCameraController.cs" />
-      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
       <option value="$PROJECT_DIR$/Assets/TexelSpaceGUI.cs" />
+      <option value="$PROJECT_DIR$/Assets/ClusteredLightning/ClusteredLightning.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipelineAsset.cs" />
+      <option value="$PROJECT_DIR$/Assets/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
+      <option value="$PROJECT_DIR$/Assets/CompactDeferred/CompactDeferred.cs" />
+      <option value="$PROJECT_DIR$/Assets/RenderPipelines/SimpleForward/SimpleForwardAsset.cs" />
+      <option value="$PROJECT_DIR$/Assets/RenderPipelines/CompactDeferred/CompactDeferred.cs" />
+      <option value="$PROJECT_DIR$/Assets/RenderPipelines/SimpleForward/SimpleForward.cs" />
+      <option value="$PROJECT_DIR$/Assets/RenderPipelines/CompactDeferred/CompactDeferredAsset.cs" />
+      <option value="$PROJECT_DIR$/Assets/RenderPipelines/TexelSpaceRenderLoop/BasicRenderpipeline.cs" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1nyiXoWmayieCMZjDYmaeuXdErU" />
@@ -80,6 +90,8 @@
       <workItem from="1613423662561" duration="769000" />
       <workItem from="1613509392691" duration="4823000" />
       <workItem from="1613686424808" duration="1439000" />
+      <workItem from="1616684781413" duration="3318000" />
+      <workItem from="1616757877952" duration="4675000" />
     </task>
     <servers />
   </component>
