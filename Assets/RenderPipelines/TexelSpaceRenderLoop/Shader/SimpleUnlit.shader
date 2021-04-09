@@ -100,14 +100,16 @@ Shader "TexelShading/Standard"
 			{
 				float4 pos : POSITION;
 				float2 uv : TEXCOORD1; // use lightmap uv
+				UNITY_VERTEX_INPUT_INSTANCE_ID 
 			};
 
 			struct v2f
 			{
 				float2 uv : TEXCOORD0;
 				float2 uvPrev : TEXCOORD1;
-
 				float4 pos : SV_POSITION;
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+				UNITY_VERTEX_OUTPUT_STEREO
 			};
 
 			sampler2D g_VistaAtlas;
@@ -115,11 +117,12 @@ Shader "TexelShading/Standard"
 			v2f vert(appdata v)
 			{
 				v2f o;
+			    UNITY_SETUP_INSTANCE_ID(v); //Insert
+			    UNITY_INITIALIZE_OUTPUT(v2f, o); //Insert
+			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
 				o.pos = UnityObjectToClipPos(v.pos);
-				o.uv = v.uv;
-				o.uvPrev = o.uv;
 				float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
-				o.uv = (v.uv * atlasScaleOffset.xy) + atlasScaleOffset.zw;
+				o.uv = v.uv * atlasScaleOffset.xy + atlasScaleOffset.zw;
 				float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b[0]].atlas_ST;
 				o.uvPrev = (v.uv * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
 
@@ -129,6 +132,8 @@ Shader "TexelShading/Standard"
 			float g_atlasMorph;
 			half4 frag(v2f i) : SV_Target
 			{
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); 
+				//return float4(i.uv, 0, 1);
 				//return float4(g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST.xy, 0, 0);
 				float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
 				atlasA.rgb /= atlasA.a;
@@ -199,9 +204,9 @@ Shader "TexelShading/Standard"
 				float4 lmap : TEXCOORD4;
 				
 				UNITY_SHADOW_COORDS(5)
-					UNITY_FOG_COORDS(6)
-					UNITY_VERTEX_INPUT_INSTANCE_ID
-					UNITY_VERTEX_OUTPUT_STEREO
+				UNITY_FOG_COORDS(6)
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+				UNITY_VERTEX_OUTPUT_STEREO
 			};
 #endif
 			float4 _MainTex_ST;
@@ -213,18 +218,17 @@ Shader "TexelShading/Standard"
 			
 			// vertex shader
 			v2f_surf vert_surf(appdata_full v) {
-				UNITY_SETUP_INSTANCE_ID(v);
 				v2f_surf o;
-				UNITY_INITIALIZE_OUTPUT(v2f_surf, o);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-				// clamp uv map to prevent bad uv-unwraping from messing up the atlas and/or massively decrease the performance
+			    UNITY_SETUP_INSTANCE_ID(v); //Insert
+			    UNITY_INITIALIZE_OUTPUT(v2f_surf, o); //Insert
+			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
+				//
+				// clamp uv map to prevent bad uv-unwrapping from messing up the atlas and/or massively decrease the performance
 				float2 atlasCoord = saturate(v.texcoord1);
 				float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				atlasCoord.y = 1 - atlasCoord.y;
-				o.pos = float4(atlasCoord * 2 - 1, 0, 1);
+				o.pos = float4(atlasCoord * 2.0 - 1.0, 0.0, 1.0);
 				// 
 				o.pack0.xy = TRANSFORM_TEX(v.texcoord, _MainTex);
 				o.pack0.zw = v.texcoord1;
@@ -361,13 +365,7 @@ Shader "TexelShading/Standard"
 			sampler2D _SpecGlossMap, _OcclusionMap, _EmissionMap;
 			half4 frag (v2f_surf i) : SV_Target
 			{
-
-				//return 1;
-				//float2 clusterID = floor(i.pack0.zw * 16) / 16.0;
-				//float clusterIDScalar = clusterID.x * 16.0 + clusterID.y;
-				//float3 colorCode = float3(clusterID, 0);
-				//return float4(colorCode, 1);
-
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 				// this is unity's regular standard shader
 				SurfaceOutputStandardSpecular s = (SurfaceOutputStandardSpecular)0;
 				s.Albedo = tex2D(_MainTex, i.pack0.xy);
@@ -461,7 +459,6 @@ Shader "TexelShading/Standard"
 					float lightAttenByRangeLimit = 1.0 - (saturate(lightRayLengthSqr / (lightRange * lightRange))); // limit with linear falloff
 
 					lightAttenInvSqr *= lightAttenByRangeLimit;
-
 
 					if (lightAttenInvSqr < 0.00001)
 						continue;

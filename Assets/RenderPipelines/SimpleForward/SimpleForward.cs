@@ -27,7 +27,7 @@ public class SimpleForward : RenderPipeline
 
     protected override void Render(ScriptableRenderContext context, Camera[] cameras)
     {
-        this.context = context;
+        context = context;
         bool stereoEnabled = XRSettings.isDeviceActive;
         Array.Sort(cameras, m_CameraComparer);
         clusteredLightning.SetParameters(asset.froxelsX, asset.froxelsY, asset.froxelsZ);
