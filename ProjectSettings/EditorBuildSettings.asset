@@ -9,6 +9,10 @@ EditorBuildSettings:
     path: Assets/TestingStuff/UnityHallway/Scenes/CorridorDemo.unity
     guid: 1bc32c56f7329614e925f91f4bb4035c
   m_configObjects:
+    Unity.XR.Oculus.Settings: {fileID: 11400000, guid: aacfc0bbc1d13ad46ad95b66d738b49c,
+      type: 2}
+    Unity.XR.OpenVR.Settings: {fileID: 11400000, guid: e15e00069bfa45e42bdc96184e2965aa,
+      type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 36a0019d47586e54d939abff96c10d69,
       type: 2}
     xr.sdk.mock-hmd.settings: {fileID: 11400000, guid: bcceea85f8198a942aac57db7fd1a3b9,

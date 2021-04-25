@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.XR;
 
 internal class ComputeBufferWithData<T> {
@@ -28,12 +29,18 @@ public class BasicRenderpipeline : RenderPipeline {
 		PerObjectData.ReflectionProbes |
 		PerObjectData.LightData;
 
+	static class TsRenderPassId {
+		// TODO
+	}
 	public static BasicRenderpipeline instance;
 	static readonly ShaderTagId m_TexelSpacePass = new ShaderTagId("Texel Space Pass");
 	static readonly ShaderTagId m_VistaPass = new ShaderTagId("Vista Pass");
 	static readonly ShaderTagId m_VisibilityPass = new ShaderTagId("Visibility Pass");
 	public static int SCREEN_X, SCREEN_Y;
 
+	static class TsResolvePassField {
+		// TODO
+	}
 	readonly ComputeBuffer g_PrimitiveVisibility,
 		g_ObjectToAtlasProperties,
 		g_prev_ObjectToAtlasProperties,
@@ -70,8 +77,7 @@ public class BasicRenderpipeline : RenderPipeline {
 
 	CullingResults m_CullResults;
 
-	ShadingCluster[]
-		shadingClusters =
+	ShadingCluster[] shadingClusters =
 			new ShadingCluster[MAXIMAL_OBJECTS_PER_VIEW * 256]; // objectID is implicid trough first 10bit of the index
 
 	int skipedFrames = 0;
@@ -118,12 +124,44 @@ public class BasicRenderpipeline : RenderPipeline {
 		g_ObjectMipMapCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
 	}
 
-	public static Camera CURRENT_CAMERA { get; private set; }
+	#region XR SDK
+		// XR SDK display interface
+		static List<XRDisplaySubsystem> displayList = new List<XRDisplaySubsystem>();
+		XRDisplaySubsystem              display = null;
+		// XRSDK does not support msaa per XR display. All displays share the same msaa level.
+		static  int                     msaaLevel = 1;
+		
+		// With XR SDK: disable legacy VR system before rendering first frame
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
+		internal static void XRSystemInit()
+		{
+			if (GraphicsSettings.currentRenderPipeline == null)
+				return;
 
+			SubsystemManager.GetSubsystems(displayList);
+
+			// XRTODO: refactor with RefreshXrSdk()
+			for (int i = 0; i < displayList.Count; i++)
+			{
+				displayList[i].disableLegacyRenderer = true;
+				displayList[i].textureLayout = XRDisplaySubsystem.TextureLayout.Texture2DArray;
+				displayList[i].sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear;
+			}
+
+		}
+		
+		Vector4[] stereoEyeIndices = new Vector4[2] { Vector4.zero , Vector4.one };
+		
+	#endregion
+
+	
 	protected override void Render(ScriptableRenderContext context, Camera[] cameras) {
 		m_asset.memoryConsumption = 0f;
 		instance = this;
-		bool stereoEnabled = XRSettings.isDeviceActive;
+
+		display = displayList.Count > 0 && displayList[0].running ? displayList[0] : null;
+		bool xrEnabled = XRSettings.isDeviceActive;
+
 		// Sort cameras array by camera depth
 		Array.Sort(cameras, m_CameraComparer);
 
@@ -151,46 +189,84 @@ public class BasicRenderpipeline : RenderPipeline {
 			CommandBufferPool.Release(cmd5);
 		}
 		bool shouldUpdateAtlas = timeSinceLastRender > 1f / m_asset.atlasRefreshFps;
+		
+		foreach (Camera camera in cameras) { 
+			//XR
 
-		//g_PrimitiveVisibility.SetData(g_PrimitiveVisibility_init);
-		foreach (Camera camera in cameras) {
-			CURRENT_CAMERA = camera;
-			SCREEN_X = CURRENT_CAMERA.pixelWidth;
-			SCREEN_Y = CURRENT_CAMERA.pixelHeight;
+			SCREEN_X = camera.pixelWidth;
+			SCREEN_Y = camera.pixelHeight;
 
 			SortingSettings cameraSortSettings = new SortingSettings(camera);
 			ScriptableCullingParameters cullingParameters;
 			
-			if (!camera.TryGetCullingParameters(stereoEnabled, out cullingParameters)) {
+			if (!camera.TryGetCullingParameters(xrEnabled, out cullingParameters)) {
 				continue;
 			}
-
-		#if UNITY_EDITOR
-			// Emit scene view UI
-			if (camera.cameraType == CameraType.SceneView) {
-				ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
-			}
-		#endif
-			m_CullResults = context.Cull(ref cullingParameters);
-			//CullingResults.Cull(ref cullingParameters, context, ref m_CullResults);
-
-			context.SetupCameraProperties(CURRENT_CAMERA, stereoEnabled);
 			
-			// {
-			// 	var cmd = CommandBufferPool.Get("Debug");
-			//
-			// 	cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
-			// 	cmd.ClearRenderTarget(true, true, Color.green);
-			//
-			// 	context.ExecuteCommandBuffer(cmd);	
-			// 	context.StartMultiEye(CURRENT_CAMERA);
-			// 	
-			// 	RenderOpaque(context, m_VistaPass, cameraSortSettings);
-			// 	context.DrawSkybox(CURRENT_CAMERA);
-			// 	context.StopMultiEye(CURRENT_CAMERA);
-			// 	continue;
-			// }
+			m_CullResults = context.Cull(ref cullingParameters);
 
+			context.SetupCameraProperties(camera, xrEnabled);
+
+			#region XRtest
+			
+			{
+				
+				var cmd = CommandBufferPool.Get("Test");			
+				
+				if (display != null) //Vr is enabled
+				{
+				#region setup stero rendering
+					// XRTODO: Handle stereo mode selection in URP pipeline asset UI
+					display.textureLayout = XRDisplaySubsystem.TextureLayout.Texture2DArray;
+					display.zNear = camera.nearClipPlane;
+					display.zFar  = camera.farClipPlane;
+					display.sRGB  = QualitySettings.activeColorSpace == ColorSpace.Linear;
+				
+					display.GetRenderPass(0, out XRDisplaySubsystem.XRRenderPass xrRenderPass);
+					cmd.SetRenderTarget(xrRenderPass.renderTarget);
+					xrRenderPass.GetRenderParameter(camera, 0, out var renderParameter0);
+					xrRenderPass.GetRenderParameter(camera, 1, out var renderParameter1);
+				#endregion
+				#region enable stero rendering
+					//enable single pass (see XRPass.cs:344)
+					if (SystemInfo.supportsMultiview)
+					{
+						cmd.EnableShaderKeyword("STEREO_MULTIVIEW_ON");
+						cmd.SetGlobalVectorArray("unity_StereoEyeIndices", stereoEyeIndices);
+					}
+					else
+					{
+						cmd.EnableShaderKeyword("STEREO_INSTANCING_ON");
+						const int viewCount = 2;
+						cmd.SetInstanceMultiplier((uint)viewCount);
+					}
+					cmd.EnableShaderKeyword(ShaderKeywordStrings.UseDrawProcedural);
+				#endregion
+				}
+				else {
+					cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+				}
+				
+				cmd.ClearRenderTarget(true, true, Color.green);
+				context.ExecuteCommandBuffer(cmd);
+				//RenderOpaque(context, m_VistaPass, cameraSortSettings);
+				context.DrawSkybox(camera);
+				
+				#region Disable stero rendering                    
+					if (SystemInfo.supportsMultiview)
+					{
+						cmd.DisableShaderKeyword("STEREO_MULTIVIEW_ON");
+					}
+					else
+					{
+						cmd.DisableShaderKeyword("STEREO_INSTANCING_ON");
+						cmd.SetInstanceMultiplier(1);
+					}
+					cmd.DisableShaderKeyword(ShaderKeywordStrings.UseDrawProcedural);
+				#endregion
+		
+			}
+			#endregion
 			int targetAtlasSize = m_asset.maximalAtlasSizePixel;
 			if (g_VistaAtlas_A == null || g_VistaAtlas_A.width != targetAtlasSize) {
 				CommandBuffer cmd5 = CommandBufferPool.Get("(Re)initialize Atlas");
@@ -267,8 +343,8 @@ public class BasicRenderpipeline : RenderPipeline {
 				// =====================================================================================================
 				LogTrace("SetupRenderBuffers...");
 				CommandBuffer cmd1 = CommandBufferPool.Get("SetupBuffers");
-				int screenX = CURRENT_CAMERA.pixelWidth;
-				int screenY = CURRENT_CAMERA.pixelHeight;
+				int screenX = camera.pixelWidth;
+				int screenY = camera.pixelHeight;
 				g_visibilityBuffer_dimension = new Vector2Int(
 					Mathf.CeilToInt(screenX / m_asset.visibilityPassDownscale),
 					Mathf.CeilToInt(screenY / m_asset.visibilityPassDownscale));
@@ -305,9 +381,9 @@ public class BasicRenderpipeline : RenderPipeline {
 				context.ExecuteCommandBuffer(cmd2);
 
 				cameraSortSettings.criteria = SortingCriteria.OptimizeStateChanges;
-				context.StartMultiEye(CURRENT_CAMERA);
+				context.StartMultiEye(camera);
 				RenderOpaque(context,m_VisibilityPass, cameraSortSettings);
-				context.StopMultiEye(CURRENT_CAMERA);
+				context.StopMultiEye(camera);
 
 				cmd2.Clear();
 				cmd2.ClearRandomWriteTargets();
@@ -448,6 +524,13 @@ public class BasicRenderpipeline : RenderPipeline {
 				cmd6.ReleaseTemporaryRT(g_PrimitiveVisibilityID);
 				context.ExecuteCommandBuffer(cmd6);
 				CommandBufferPool.Release(cmd6);
+				
+			#if UNITY_EDITOR
+				// Emit scene view UI
+				if (camera.cameraType == CameraType.SceneView) {
+					ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
+				}
+			#endif
 			}
 
 			visibleObjects.Clear();
@@ -462,12 +545,12 @@ public class BasicRenderpipeline : RenderPipeline {
 			cmdVista.Clear();
 
 			
-			context.StartMultiEye(CURRENT_CAMERA);
+			context.StartMultiEye(camera);
 			switch (m_asset.debugPass) {
 				case TexelSpaceDebugMode.None:
 					cameraSortSettings.criteria = SortingCriteria.OptimizeStateChanges;
 					RenderOpaque(context, m_VistaPass, cameraSortSettings); // render vista
-					context.DrawSkybox(CURRENT_CAMERA);
+					context.DrawSkybox(camera);
 					break;
 				case TexelSpaceDebugMode.VisibilityPassObjectID:
 				case TexelSpaceDebugMode.VisibilityPassPrimitivID:
@@ -482,7 +565,7 @@ public class BasicRenderpipeline : RenderPipeline {
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
-			context.StopMultiEye(CURRENT_CAMERA);
+			context.StopMultiEye(camera);
 			cmdVista.Blit(g_CameraTarget, BuiltinRenderTextureType.CameraTarget);
 			cmdVista.ReleaseTemporaryRT(g_CameraTarget);
 			context.ExecuteCommandBuffer(cmdVista);
