@@ -151,45 +151,42 @@ Shader "TexelShading/Standard"
 			#pragma vertex vert
 			#pragma fragment frag
 
-			#include "UnityCG.cginc"
-
-			struct appdata
-			{
-				float4 pos : POSITION;
-				float2 uv : TEXCOORD1; // use lightmap uv
-				UNITY_VERTEX_INPUT_INSTANCE_ID 
-			};
+			#include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+			#include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
 			struct v2f
 			{
 				float2 uv : TEXCOORD0;
 				float2 uvPrev : TEXCOORD1;
-				float4 pos : SV_POSITION;
+				float4 positionCS : SV_POSITION;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
 
-
-			v2f vert(appdata v)
+			v2f vert(Attributes input)
 			{
-				v2f o;
-			    UNITY_SETUP_INSTANCE_ID(v); //Insert
-			    UNITY_INITIALIZE_OUTPUT(v2f, o); //Insert
-			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
-				o.pos = UnityObjectToClipPos(v.pos);
-				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
-				o.uv = v.uv * atlasScaleOffset.xy + atlasScaleOffset.zw;
-				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b[0]].atlas_ST;
-				o.uvPrev = (v.uv * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
+				v2f output = (v2f)0;
+			    UNITY_SETUP_INSTANCE_ID(input);
+			    UNITY_TRANSFER_INSTANCE_ID(input, output);
+			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-				o.uv = v.uv;
-				return o;
+				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+				
+				output.positionCS = vertexInput.positionCS;
+				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
+				output.uv = input.texcoord * atlasScaleOffset.xy + atlasScaleOffset.zw;
+				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b[0]].atlas_ST;
+				output.uvPrev = (input.texcoord * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
+
+				output.uv = input.lightmapUV;
+				return output;
 			}
 
 			float g_atlasMorph;
 			half4 frag(v2f i) : SV_Target
 			{
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); 
+				UNITY_SETUP_INSTANCE_ID(i);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 				//return float4(i.uv, 0, 1);
 				
 				float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
@@ -198,13 +195,13 @@ Shader "TexelShading/Standard"
 
 				float4 atlasB = tex2D(g_VistaAtlas, i.uv);		
 				atlasB.rgb /= atlasB.a;
-				atlasB.rgb = SimpleTonemapInverse(atlasB.rgb);
+				//atlasB.rgb = SimpleTonemapInverse(atlasB.rgb);
 
 
 				float4 finalColor = lerp(atlasA, atlasB, g_atlasMorph);
 
 				//finalColor.rgb = TonemappingACES(finalColor.rgb);
-				return tex2D(g_prev_VistaAtlas, i.uv);
+				return atlasB;
 			}
 			ENDHLSL
 		}
@@ -222,8 +219,8 @@ Shader "TexelShading/Standard"
             Cull Off
 
             HLSLPROGRAM
-            #pragma exclude_renderers gles gles3 glcore
-            #pragma target 4.5
+            //#pragma only_renderers gles gles3 glcore
+            #pragma target 2.0
 
             // -------------------------------------
             // Material Keywords
@@ -277,15 +274,20 @@ Shader "TexelShading/Standard"
 				float2 atlasCoord = saturate(input.lightmapUV);
 				float4 atlasScaleOffset = float4(1.0, 1.0, 0.0, 0.0);// g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
-				atlasCoord.y = 1 - atlasCoord.y;
+				#if defined(SHADER_API_D3D11)
+					atlasCoord.y = 1 - atlasCoord.y;
+				#endif
+			
 				output.positionCS = float4(atlasCoord * 2.0 - 1.0, 0.0, 1.0);
-
 				return output;
 			}
 
             half4 TsLitPassFragment(Varyings input) : SV_Target
 			{
-				return 1.0;
+				UNITY_SETUP_INSTANCE_ID(input);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+				
+				return 0.5;
 			}
 // //#define FULLSCREEN_TRIANGLE_CULLING
 // 			float3 g_CameraPositionWS;

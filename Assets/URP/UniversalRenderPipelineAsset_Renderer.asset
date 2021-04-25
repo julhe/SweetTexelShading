@@ -52,7 +52,8 @@ MonoBehaviour:
   m_Name: NewTexelSpaceRenderFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  ProfilerTag: TexelSpace
+  visibleObjects: []
+  AtlasSizeExponent: 11
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
