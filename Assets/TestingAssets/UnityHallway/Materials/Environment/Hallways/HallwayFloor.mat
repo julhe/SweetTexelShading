@@ -89,7 +89,7 @@ Material:
     - _AlphaClip: 0
     - _AlphaTestRef: 0.5
     - _Blend: 0
-    - _BumpScale: 0.8
+    - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
     - _Cull: 2

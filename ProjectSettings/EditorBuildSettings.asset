@@ -6,10 +6,10 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 0
-    path: Assets/TestingStuff/UnityHallway/Scenes/CorridorDemo.unity
+    path: Assets/TestingAssets/UnityHallway/Scenes/CorridorDemo.unity
     guid: 1bc32c56f7329614e925f91f4bb4035c
   - enabled: 1
-    path: Assets/TestingStuff/plane.unity
+    path: Assets/TestingAssets/plane.unity
     guid: a390891f6b70de74892f3e9226b0110f
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: aacfc0bbc1d13ad46ad95b66d738b49c,
