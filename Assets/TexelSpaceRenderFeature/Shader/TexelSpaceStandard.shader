@@ -268,13 +268,16 @@ Shader "TexelShading/Standard"
 
             Varyings TsLitPassVertex(Attributes input)
 			{
+				// run the original vertex pass
 				Varyings output = LitPassVertex(input);
-				
+
+				// now use the lightmap uv as the output uv
 				// clamp uv map to prevent bad uv-unwrapping from messing up the atlas and/or massively decrease the performance
 				float2 atlasCoord = saturate(input.lightmapUV);
 				float4 atlasScaleOffset = float4(1.0, 1.0, 0.0, 0.0);// g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
-				#if defined(SHADER_API_D3D11)
+				//TODO: also for D3D12, etc...
+				#if defined(SHADER_API_D3D11) 
 					atlasCoord.y = 1 - atlasCoord.y;
 				#endif
 			
@@ -379,6 +382,6 @@ Shader "TexelShading/Standard"
 
 
 	}
-	//FallBack "Hidden/Universal Render Pipeline/FallbackError"
+	FallBack "Universal Render Pipeline/Lit"
     CustomEditor "UnityEditor.Rendering.Universal.ShaderGUI.LitShader"
 }

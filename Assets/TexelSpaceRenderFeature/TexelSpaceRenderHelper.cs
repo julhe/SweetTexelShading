@@ -14,7 +14,6 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
         meshRenderer = GetComponent<MeshRenderer>();
     }
 
