@@ -22,6 +22,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
     #endregion
 
     [Range(8, 13)] public int AtlasSizeExponent = 10;
+    public float AtlasResolutionScale = 1024f;
     public ComputeShader TssComputeShader;
     
     RenderTexture VistaAtlasA;
@@ -49,15 +50,13 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
             renderPassEvent = RenderPassEvent.BeforeRenderingOpaques
         };
 
-        visibilityPass = new VisibilityPass(TssComputeShader) {
-            renderPassEvent = RenderPassEvent.BeforeRendering
+        visibilityPass = new VisibilityPass() {
+            renderPassEvent = RenderPassEvent.BeforeRenderingPrepasses
         };
         RenderTextureCreateOrChange(ref VistaAtlasA, AtlasSizeExponent);
-        
-        VisibilityRt.Init("_VisibilityRt");
     }
 
-    static RenderTargetHandle VisibilityRt;
+
     // Passes:
     // 1: (Render) Visibility
     // 2: (Compute) Visibility Compute
@@ -67,32 +66,47 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
     VisibilityPass visibilityPass;
     TexelSpaceShadingPass texelSpaceShadingPass;
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) {
+        visibilityPass.m_ResolveCS = TssComputeShader;
+        visibilityPass.AtlasResolutionScale = AtlasResolutionScale;
+        visibilityPass.AtlasSizeExponent = AtlasSizeExponent;
+        visibilityPass.AtlasAxisSize = 1 << AtlasSizeExponent;
+        visibilityPass.Initialize();
+        if (visibilityPass.IsReady) {
+            // Visiblity Pass
+            // =============================================================================================================
+            for (int i = 0; i < visibleObjects.Count; i++) {
+                visibleObjects[i].SetAtlasProperties(i + 1); //objectID 0 is reserved for "undefined"
+            }
 
-        // Visiblity Pass
-        // =============================================================================================================
-        for (int i = 0; i < visibleObjects.Count; i++) {
-            visibleObjects[i].SetAtlasProperties(i + 1); //objectID 0 is reserved for "undefined"
+            visibilityPass.VisibleObjects = visibleObjects.Count;
+            renderer.EnqueuePass(visibilityPass);
+        
+            // Shading Pass
+            // =============================================================================================================
+            RenderTextureCreateOrChange(ref VistaAtlasA, AtlasSizeExponent);
+            texelSpaceShadingPass.TargetAtlas = VistaAtlasA;
+            renderer.EnqueuePass(texelSpaceShadingPass);
+        }
+        else {
+            Debug.LogError($"{nameof(TexelSpaceRenderFeature)} is not ready. TSS will not execute.");
         }
         visibleObjects.Clear();
-
-        renderer.EnqueuePass(visibilityPass);
-        
-        // Shading Pass
-        // =============================================================================================================
-        RenderTextureCreateOrChange(ref VistaAtlasA, AtlasSizeExponent);
-        texelSpaceShadingPass.TargetAtlas = VistaAtlasA;
-        renderer.EnqueuePass(texelSpaceShadingPass);
-        
     }
 
     class VisibilityPass : ScriptableRenderPass {
+        public float AtlasResolutionScale, VisiblityPassDownscale = 1f;
+        public int AtlasSizeExponent = 10;
+        public bool IsReady => m_ResolveCS != null;
+        public bool Initialized = false;
         ShaderTagId visibilityPass = new ShaderTagId("Visibility Pass");
 
-        ComputeShader m_ResolveCS;
+        public ComputeShader m_ResolveCS;
         public int g_PrimitiveVisibilityID = Shader.PropertyToID("g_PrimitiveVisibility");
         public int g_VisibilityBufferID = Shader.PropertyToID("g_VisibilityBuffer");
+        RenderTargetIdentifier g_visibilityBuffer_RT;
 
         public int VisibleObjects, AtlasAxisSize;
+        Vector2Int g_visibilityBuffer_dimension;
 
         ComputeBuffer
             g_PrimitiveVisibility,
@@ -102,14 +116,23 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
             g_Object_MipmapLevelB,
             g_ObjectMipMapCounterValue;
 
-        int m_cs_ExtractVisibility, m_cs_MipMapFinalize, m_cs_DebugVisibilityBuffer, m_cs_AtlasPacking, m_cs_CopyDataToPreFrameBuffer;
-        public VisibilityPass(ComputeShader m_ResolveCS) {
-            this.m_ResolveCS = m_ResolveCS;
+        int m_cs_ExtractVisibility, m_cs_MipMapFinalize, m_cs_DebugVisibilityBuffer, m_cs_AtlasPacking, m_cs_CopyDataToPreFrameBuffer, m_cs_InitalizePrimitiveVisiblity;
+
+        public void Initialize() {
+            if (!m_ResolveCS) {
+                Debug.LogError("Compute Shader not set.");
+                return;
+            }
+            
+            if (Initialized) {
+                return;
+            }
             m_cs_ExtractVisibility = m_ResolveCS.FindKernel("ExtractCoverage");
             m_cs_DebugVisibilityBuffer = m_ResolveCS.FindKernel("DebugShowVertexID");
             m_cs_AtlasPacking = m_ResolveCS.FindKernel("AtlasPacking");
             m_cs_CopyDataToPreFrameBuffer = m_ResolveCS.FindKernel("CopyDataToPreFrameBuffer");
             m_cs_MipMapFinalize = m_ResolveCS.FindKernel("MipMapFinalize");
+            m_cs_InitalizePrimitiveVisiblity = m_ResolveCS.FindKernel("InitalizePrimitiveVisiblity");
             
             g_PrimitiveVisibility =
                 new ComputeBuffer(MaximalObjectsPerView * (MAX_PRIMITIVES_PER_OBJECT / 32), sizeof(int));
@@ -129,8 +152,9 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
             g_Object_MipmapLevelB = new ComputeBuffer(g_Object_MipmapLevelA.count, g_Object_MipmapLevelA.stride,
                 ComputeBufferType.Append);
             g_ObjectMipMapCounterValue = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
-            
-            
+
+            g_visibilityBuffer_RT = new RenderTargetIdentifier(g_VisibilityBufferID);
+            Initialized = true;
         }
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor) {
             base.Configure(cmd, cameraTextureDescriptor);
@@ -139,48 +163,170 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
             // create vista RT
             var textureDescriptor = cameraTextureDescriptor;
             textureDescriptor.colorFormat = RenderTextureFormat.RInt;
-
-            cmd.GetTemporaryRT(VisibilityRt.id, textureDescriptor);
-            ConfigureTarget(VisibilityRt.Identifier());
+            textureDescriptor.depthBufferBits = 16;
+            textureDescriptor.msaaSamples = 1;
+            
+           cmd.GetTemporaryRT(g_VisibilityBufferID, textureDescriptor);
+           ConfigureTarget(g_VisibilityBufferID);
         }
 
+        //TODO: merge command buffers to single one
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
+            CameraData cameraData = renderingData.cameraData;
+            int screenXpx = cameraData.camera.pixelWidth, screenYpx = cameraData.camera.pixelHeight;
+            // SetupShaderGlobals
+            // =====================================================================================================
+            {
+                CommandBuffer cmd5 = CommandBufferPool.Get("SetupShaderGlobals");
+                cmd5.SetGlobalFloat("g_AtlasResolutionScale",
+                    AtlasResolutionScale / VisiblityPassDownscale); 
+                // float lerpFactor =
+                //     Mathf.Clamp01((float) timeSinceLastRender /
+                //                   (1f / m_asset.atlasRefreshFps)); //TODO: clamp should't been neccesary
+
+                cmd5.SetGlobalFloat("g_atlasMorph", 0.5f);
+                // if (m_asset.TexelSpaceBackfaceCulling) {
+                //     cmd5.EnableShaderKeyword("TRIANGLE_CULLING");
+                // }
+                // else {
+                //     cmd5.DisableShaderKeyword("TRIANGLE_CULLING");
+                // }
+
+                context.ExecuteCommandBuffer(cmd5);
+                CommandBufferPool.Release(cmd5);
+            }
+            
+            // =====================================================================================================
+            // CopyDataToPreFrameBuffer
+            // =====================================================================================================
+            // LogVerbose("CopyDataToPreFrameBuffer...");
+            {
+                CommandBuffer cmd = CommandBufferPool.Get("CopyDataToPreFrameBuffer");
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CopyDataToPreFrameBuffer, "g_ObjectToAtlasProperties",
+                    g_ObjectToAtlasProperties);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_CopyDataToPreFrameBuffer, "g_prev_ObjectToAtlasProperties",
+                    g_prev_ObjectToAtlasProperties);
+                uint threadsX, threadsY, threadsZ;
+                m_ResolveCS.GetKernelThreadGroupSizes(m_cs_CopyDataToPreFrameBuffer, out threadsX, out threadsY,
+                    out threadsZ);
+                cmd.DispatchCompute(m_ResolveCS, m_cs_CopyDataToPreFrameBuffer,
+                    Mathf.CeilToInt(MaximalObjectsPerView / (float) 64.0), 1, 1);
+
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_InitalizePrimitiveVisiblity, g_PrimitiveVisibilityID,
+                    g_PrimitiveVisibility);
+                cmd.DispatchCompute(m_ResolveCS, m_cs_InitalizePrimitiveVisiblity,
+                    Mathf.CeilToInt(g_PrimitiveVisibility.count / (float) threadsX), 1, 1);
+                context.ExecuteCommandBuffer(cmd);
+                CommandBufferPool.Release(cmd);
+            }
+            // =====================================================================================================
+            // SetupRenderBuffers
+            // =====================================================================================================
+            {
+                //TODO: move this into pass configure?
+                
+               // LogTrace("SetupRenderBuffers...");
+                CommandBuffer cmd1 = CommandBufferPool.Get("SetupBuffers");
+                int screenX = cameraData.camera.pixelWidth;
+                int screenY = cameraData.camera.pixelHeight;
+                g_visibilityBuffer_dimension = new Vector2Int(
+                    Mathf.CeilToInt(screenX / VisiblityPassDownscale),
+                    Mathf.CeilToInt(screenY / VisiblityPassDownscale));
+
+                // cmd1.GetTemporaryRT(g_VisibilityBufferID, g_visibilityBuffer_dimension.x,
+                //     g_visibilityBuffer_dimension.y, 32, FilterMode.Point, RenderTextureFormat.RInt,
+                //     RenderTextureReadWrite.Linear, 1);
+
+                // NOTE: RT already set by pass configuration
+                // cmd1.SetRenderTarget(g_visibilityBuffer_RT);
+                // cmd1.ClearRenderTarget(true, true, Color.clear);
+                //
+                // cmd1.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
+                // if (m_asset.clearAtlasOnRefresh) {
+                //     cmd1.ClearRenderTarget(true, true, Color.clear);
+                // }
+
+
+                cmd1.SetGlobalFloat("g_AtlasSizeExponent", AtlasSizeExponent);
+                context.ExecuteCommandBuffer(cmd1);
+                CommandBufferPool.Release(cmd1);
+            }
+            
+            // Render Visiblity Pass
             var drawingSettings = CreateDrawingSettings(visibilityPass, ref renderingData, SortingCriteria.OptimizeStateChanges);
+            //TODO: only render opaque?
             FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all);
             context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filterSettings);
             
-            
             // VISIBLITY DISSOLVE PASS
             // maps the previous rendered data into usable buffers
-            var cmd = CommandBufferPool.Get("Visibilty Disolve");
-            cmd.SetComputeTextureParam(m_ResolveCS, m_cs_ExtractVisibility, g_VisibilityBufferID,
-                VisibilityRt.id);
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, g_PrimitiveVisibilityID,
-                g_PrimitiveVisibility);
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, "g_ObjectToAtlasProperties",
-                g_ObjectToAtlasProperties);
+            {
+                CommandBuffer cmd = CommandBufferPool.Get("Visibilty Disolve");
+                cmd.SetComputeTextureParam(m_ResolveCS, m_cs_ExtractVisibility, g_VisibilityBufferID, g_visibilityBuffer_RT);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, g_PrimitiveVisibilityID,
+                    g_PrimitiveVisibility);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, "g_ObjectToAtlasProperties",
+                    g_ObjectToAtlasProperties);
 
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, "g_ObjectMipMap_append",
-                g_Object_MipmapLevelA);
-            int SCREEN_X = 32, SCREEN_Y = 32; //TODO:
-            cmd.DispatchCompute(m_ResolveCS, m_cs_ExtractVisibility, SCREEN_X / COMPUTE_COVERAGE_TILE_SIZE,
-                SCREEN_Y / COMPUTE_COVERAGE_TILE_SIZE, 1);
-            cmd.CopyCounterValue(g_Object_MipmapLevelA, g_ObjectMipMapCounterValue, 0);
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectMipMap_consume",
-                g_Object_MipmapLevelA);
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectToAtlasProperties",
-                g_ObjectToAtlasProperties);
-            cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectMipMapCounterValue",
-                g_ObjectMipMapCounterValue);
-            cmd.DispatchCompute(m_ResolveCS, m_cs_MipMapFinalize, 1, 1, 1);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_ExtractVisibility, "g_ObjectMipMap_append",
+                    g_Object_MipmapLevelA);
+                
+                cmd.DispatchCompute(
+                    m_ResolveCS, 
+                    m_cs_ExtractVisibility, 
+                    screenXpx / COMPUTE_COVERAGE_TILE_SIZE,
+                    screenYpx / COMPUTE_COVERAGE_TILE_SIZE, 
+                    1);
+                cmd.CopyCounterValue(g_Object_MipmapLevelA, g_ObjectMipMapCounterValue, 0);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectMipMap_consume",
+                    g_Object_MipmapLevelA);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectToAtlasProperties",
+                    g_ObjectToAtlasProperties);
+                cmd.SetComputeBufferParam(m_ResolveCS, m_cs_MipMapFinalize, "g_ObjectMipMapCounterValue",
+                    g_ObjectMipMapCounterValue); 
+                cmd.DispatchCompute(m_ResolveCS, m_cs_MipMapFinalize, 1, 1, 1);
 
-            context.ExecuteCommandBuffer(cmd);
-            CommandBufferPool.Release(cmd);
+                context.ExecuteCommandBuffer(cmd);
+                CommandBufferPool.Release(cmd);
+            }
+            
+            // =====================================================================================================
+            // PackAtlas
+            // =====================================================================================================
+            {
+               // LogTrace("PackAtlas...");
+                CommandBuffer cmd3 = CommandBufferPool.Get("PackAtlas");
+
+                cmd3.SetComputeIntParam(m_ResolveCS, "g_totalObjectsInView", VisibleObjects + 1);
+                cmd3.SetComputeIntParam(m_ResolveCS, "g_atlasAxisSize", AtlasAxisSize);
+
+                cmd3.SetComputeBufferParam(m_ResolveCS, m_cs_AtlasPacking, "g_ObjectToAtlasProperties",
+                    g_ObjectToAtlasProperties);
+
+                cmd3.DispatchCompute(m_ResolveCS, m_cs_AtlasPacking, 1, 1, 1);
+
+                context.ExecuteCommandBuffer(cmd3);
+                CommandBufferPool.Release(cmd3);
+            }
+            
+            // =====================================================================================================
+            // PackAtlas
+            // =====================================================================================================
+            {
+                CommandBuffer cmd = CommandBufferPool.Get("PackAtlas");
+                cmd.SetGlobalBuffer(g_PrimitiveVisibilityID, g_PrimitiveVisibility);
+                cmd.SetGlobalBuffer("g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
+                cmd.SetGlobalBuffer("g_prev_ObjectToAtlasProperties", g_prev_ObjectToAtlasProperties);
+                context.ExecuteCommandBuffer(cmd);
+                CommandBufferPool.Release(cmd);
+            }
+
+
         }
 
         public override void OnCameraCleanup(CommandBuffer cmd) {
             base.OnCameraCleanup(cmd);
-            cmd.ReleaseTemporaryRT(VisibilityRt.id);
+           // cmd.ReleaseTemporaryRT(VisibilityRt.id);
             
         }
     }
@@ -193,6 +339,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor) {
             ConfigureTarget(TargetAtlas);
             ConfigureClear(ClearFlag.Color, Color.clear);
+            // TODO:
+            //cmd.SetGlobalTexture("g_prev_VistaAtlas", target_atlasA ? g_VistaAtlas_B : g_VistaAtlas_A);
             cmd.SetGlobalTexture("g_VistaAtlas", TargetAtlas);
         }
         

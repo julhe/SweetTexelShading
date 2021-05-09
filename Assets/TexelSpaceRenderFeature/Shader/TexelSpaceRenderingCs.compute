@@ -20,7 +20,7 @@ void CopyDataToPreFrameBuffer(uint3 id : SV_DispatchThreadID, uint groupIndex : 
 
 	g_ObjectToAtlasProperties[index].objectID = index; // reset object ID
 	g_ObjectToAtlasProperties[index].sizeExponent = 0; //reset the mipmap level, otherwise the max() function for detecting the highest mipmap level would fail overtime
-	g_ObjectToAtlasProperties[index].atlas_ST = 0;
+	g_ObjectToAtlasProperties[index].atlas_ST = 0; // rest atlas Rect-Transform
 }
 
 

@@ -505,9 +505,7 @@ public class BasicRenderpipeline : RenderPipeline {
 				cmd4.SetGlobalInt("g_LightsCount", Mathf.Min(MAX_LIGHTS, visibleLights.Length));
 
 				cmd4.SetRenderTarget(target_atlasA ? g_VistaAtlas_A : g_VistaAtlas_B);
-				cmd4.SetGlobalBuffer(g_PrimitiveVisibilityID, g_PrimitiveVisibility);
-				cmd4.SetGlobalBuffer("g_ObjectToAtlasProperties", g_ObjectToAtlasProperties);
-				cmd4.SetGlobalBuffer("g_prev_ObjectToAtlasProperties", g_prev_ObjectToAtlasProperties);
+
 				context.ExecuteCommandBuffer(cmd4);
 				RenderOpaque(context, m_TexelSpacePass, cameraSortSettings);
 

@@ -77,7 +77,9 @@ Shader "TexelShading/Standard"
 		LOD 100
 		HLSLINCLUDE
 
-		#include "TexelShading.cginc" 
+		#include "TexelShading.cginc"
+		#include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+		#include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
 		#pragma enable_d3d11_debug_symbols
 		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
@@ -94,33 +96,35 @@ Shader "TexelShading/Standard"
 			HLSLPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-			#pragma target 5.0
-			#include "UnityCG.cginc"
-
-				struct appdata
-			{
-				float4 vertex : POSITION;
-				float2 uv : TEXCOORD1; // use lightmap uv
-			};
 
 			struct v2f
 			{
-				float4 vertex : SV_POSITION;
-				float3 worldPos : COLOR;
+				float4 positionCS : SV_POSITION;
+				float3 positionWS : COLOR;
 				float2 uv : TEXCOORD0;
+				UNITY_VERTEX_INPUT_INSTANCE_ID
+				UNITY_VERTEX_OUTPUT_STEREO
 			};
 
-			v2f vert(appdata v)
+			v2f vert(Attributes input)
 			{
-				v2f o;
-				o.vertex = UnityObjectToClipPos(v.vertex);
-				o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-				o.uv = v.uv;
-				return o;
+				v2f output = (v2f)0;
+			    UNITY_SETUP_INSTANCE_ID(input);
+			    UNITY_TRANSFER_INSTANCE_ID(input, output);
+			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+
+				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
+				output.uv = input.lightmapUV;
+				output.positionCS = vertexInput.positionCS;
+				output.positionWS = vertexInput.positionWS;
+				return output;
 			}
+			
 			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
 			uint4 frag(v2f i, uint primID : SV_PrimitiveID) : SV_Target
 			{
+				UNITY_SETUP_INSTANCE_ID(i);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 				float2 dx = ddx(i.uv * g_AtlasResolutionScale);
 				float2 dy = ddy(i.uv * g_AtlasResolutionScale);
 
@@ -135,8 +139,6 @@ Shader "TexelShading/Standard"
 				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
 				// note: it's still possible that a part with a high mipmap level is occluded later! 
 				// InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
-				
-
 				return EncodeVisibilityBuffer(objectID, primID, mipMapLevel);
 			}
 			ENDHLSL
@@ -150,9 +152,6 @@ Shader "TexelShading/Standard"
 				
 			#pragma vertex vert
 			#pragma fragment frag
-
-			#include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
-			#include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
 			struct v2f
 			{
@@ -174,11 +173,11 @@ Shader "TexelShading/Standard"
 				
 				output.positionCS = vertexInput.positionCS;
 				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
-				output.uv = input.texcoord * atlasScaleOffset.xy + atlasScaleOffset.zw;
+				output.uv = input.lightmapUV * atlasScaleOffset.xy + atlasScaleOffset.zw;
 				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b[0]].atlas_ST;
-				output.uvPrev = (input.texcoord * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
+				output.uvPrev = (input.lightmapUV * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
 
-				output.uv = input.lightmapUV;
+				//output.uv = input.lightmapUV;
 				return output;
 			}
 
@@ -274,7 +273,7 @@ Shader "TexelShading/Standard"
 				// now use the lightmap uv as the output uv
 				// clamp uv map to prevent bad uv-unwrapping from messing up the atlas and/or massively decrease the performance
 				float2 atlasCoord = saturate(input.lightmapUV);
-				float4 atlasScaleOffset = float4(1.0, 1.0, 0.0, 0.0);// g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
+				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				//TODO: also for D3D12, etc...
 				#if defined(SHADER_API_D3D11) 
