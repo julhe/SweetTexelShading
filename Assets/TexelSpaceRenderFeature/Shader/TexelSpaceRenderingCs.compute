@@ -37,7 +37,6 @@ void InitalizePrimitiveVisiblity(uint3 id : SV_DispatchThreadID, uint groupIndex
 #pragma kernel ExtractCoverage
 Texture2D<uint> g_VisibilityBuffer;
 
-
 uint2 g_VisibilityBuffer_pixelCount;
 groupshared uint shared_Object_MipmapLevel[MAXIMAL_OBJECTS_PER_VIEW];
 AppendStructuredBuffer<uint> g_ObjectMipMap_append;

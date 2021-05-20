@@ -97,6 +97,11 @@ Shader "TexelShading/Standard"
 			#pragma vertex vert
 			#pragma fragment frag
 
+			//--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ DOTS_INSTANCING_ON
+
 			struct v2f
 			{
 				float4 positionCS : SV_POSITION;
@@ -152,6 +157,11 @@ Shader "TexelShading/Standard"
 				
 			#pragma vertex vert
 			#pragma fragment frag
+
+			//--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ DOTS_INSTANCING_ON
 
 			struct v2f
 			{
@@ -282,14 +292,6 @@ Shader "TexelShading/Standard"
 			
 				output.positionCS = float4(atlasCoord * 2.0 - 1.0, 0.0, 1.0);
 				return output;
-			}
-
-            half4 TsLitPassFragment(Varyings input) : SV_Target
-			{
-				UNITY_SETUP_INSTANCE_ID(input);
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-				
-				return 0.5;
 			}
 // //#define FULLSCREEN_TRIANGLE_CULLING
 // 			float3 g_CameraPositionWS;

@@ -84,3 +84,4 @@ $RECYCLE.BIN/
 *.lnk
 
 /Assets/BuildReport/*
+temp.hlsl

@@ -108,6 +108,10 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
         public int VisibleObjects, AtlasAxisSize;
         Vector2Int g_visibilityBuffer_dimension;
 
+        static class CsKernels {
+            public static int ExtractVisiblity;
+        }
+        
         ComputeBuffer
             g_PrimitiveVisibility,
             g_ObjectToAtlasProperties,
@@ -127,6 +131,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
             if (Initialized) {
                 return;
             }
+
+            
             m_cs_ExtractVisibility = m_ResolveCS.FindKernel("ExtractCoverage");
             m_cs_DebugVisibilityBuffer = m_ResolveCS.FindKernel("DebugShowVertexID");
             m_cs_AtlasPacking = m_ResolveCS.FindKernel("AtlasPacking");
@@ -158,16 +164,24 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
         }
         public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor) {
             base.Configure(cmd, cameraTextureDescriptor);
-            
-            // assume XR is go always single pass
-            // create vista RT
-            var textureDescriptor = cameraTextureDescriptor;
+
+         
+            // Create the rendertarget for the visiblity information
+            RenderTextureDescriptor textureDescriptor = cameraTextureDescriptor;
             textureDescriptor.colorFormat = RenderTextureFormat.RInt;
             textureDescriptor.depthBufferBits = 16;
             textureDescriptor.msaaSamples = 1;
+            //NOTE: force mono-scopic rendering. adding support for array textures in the visiblity pass feels wierd...
+            // but that might change if we render out visibility in the vista pass anyways?
+            textureDescriptor.vrUsage = VRTextureUsage.None;
+            textureDescriptor.dimension = TextureDimension.Tex2D;
+            if (cameraTextureDescriptor.vrUsage == VRTextureUsage.TwoEyes) {
+                textureDescriptor.width *= 2;
+            }
             
-           cmd.GetTemporaryRT(g_VisibilityBufferID, textureDescriptor);
-           ConfigureTarget(g_VisibilityBufferID);
+            cmd.GetTemporaryRT(g_VisibilityBufferID, textureDescriptor);
+            ConfigureTarget(g_VisibilityBufferID);
+            ConfigureClear(ClearFlag.All, Color.clear);
         }
 
         //TODO: merge command buffers to single one
