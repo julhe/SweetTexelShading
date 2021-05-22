@@ -50,16 +50,22 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 	}	
 	AllMemoryBarrierWithGroupSync();
 
-	// read pixel from visiblityBuffer
+	uint px = 0;
 	uint objectID, primitiveID, mipmapLevel;
-	uint px;
+	uint visibilityWidth, visibilityHeight;
+	g_VisibilityBuffer.GetDimensions(/*out*/ visibilityWidth, /*out*/visibilityHeight );
+	if(id.x < visibilityWidth && id.y < visibilityHeight) {
+		// read pixel from visiblityBuffer
+	
+		uint px = g_VisibilityBuffer[id.xy];
+		DecodeVisibilityBuffer(
+			px,
+			/*out*/ objectID,
+			/*out*/ primitiveID,
+			/*out*/ mipmapLevel);
+	}
+	
 
-	px = g_VisibilityBuffer[id.xy];
-	DecodeVisibilityBuffer(
-		px,
-		/*out*/ objectID,
-		/*out*/ primitiveID,
-		/*out*/ mipmapLevel);
 
 	if (objectID != 0) // 0 means "undefined"
 	{
