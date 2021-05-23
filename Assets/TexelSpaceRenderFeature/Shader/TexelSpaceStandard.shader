@@ -84,7 +84,7 @@ Shader "TexelShading/Standard"
 		#pragma enable_d3d11_debug_symbols
 		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
 		StructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
-		StructuredBuffer<uint> _ObjectID_b, _prev_ObjectID_b; // wrap the objectID inside a buffer, since ints cant be set over a materialproperty block
+		uint _ObjectID_b, _prev_ObjectID_b; 
 	
 		float g_AtlasResolutionScale;
 		sampler2D g_prev_VistaAtlas, g_VistaAtlas;
@@ -122,6 +122,7 @@ Shader "TexelShading/Standard"
 				output.uv = input.lightmapUV;
 				output.positionCS = vertexInput.positionCS;
 				output.positionWS = vertexInput.positionWS;
+
 				return output;
 			}
 			
@@ -139,7 +140,7 @@ Shader "TexelShading/Standard"
 
 				uint clusterID = floor(i.uv.x * 8 *8 + i.uv.y * 8);
 				uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
-				uint objectID = _ObjectID_b[0];
+				uint objectID = _ObjectID_b;
 
 				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
 				// note: it's still possible that a part with a high mipmap level is occluded later! 
@@ -182,9 +183,9 @@ Shader "TexelShading/Standard"
 				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
 				
 				output.positionCS = vertexInput.positionCS;
-				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
+				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b].atlas_ST;
 				output.uv = input.lightmapUV * atlasScaleOffset.xy + atlasScaleOffset.zw;
-				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b[0]].atlas_ST;
+				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b].atlas_ST;
 				output.uvPrev = (input.lightmapUV * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
 
 				//output.uv = input.lightmapUV;
@@ -218,11 +219,13 @@ Shader "TexelShading/Standard"
 		Pass
 		{
 
+			// Shading pass
+			// Reuses the URP Code path to render to the atlas.
+			// Right now, it only does adjust the output vertex coordinates from the vertex shader.
+			
 			Tags{"LightMode" = "Texel Space Pass"}
-            // Lightmode matches the ShaderPassName set in UniversalRenderPipeline.cs. SRPDefaultUnlit and passes with
-            // no LightMode tag are also rendered by Universal Render Pipeline
-
-            //Blend[_SrcBlend][_DstBlend]
+			
+			//Blend[_SrcBlend][_DstBlend]
             ZWrite Off
 			ZTest Off
             Cull Off
@@ -281,9 +284,9 @@ Shader "TexelShading/Standard"
 				Varyings output = LitPassVertex(input);
 
 				// now use the lightmap uv as the output uv
-				// clamp uv map to prevent bad uv-unwrapping from messing up the atlas and/or massively decrease the performance
+				// clamp uv map to prevent bad uv-unwrapping from messing up the atlas and massively decrease the performance
 				float2 atlasCoord = saturate(input.lightmapUV);
-				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b[0]].atlas_ST;
+				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b].atlas_ST;
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				//TODO: also for D3D12, etc...
 				#if defined(SHADER_API_D3D11) 
@@ -293,6 +296,8 @@ Shader "TexelShading/Standard"
 				output.positionCS = float4(atlasCoord * 2.0 - 1.0, 0.0, 1.0);
 				return output;
 			}
+
+            
 // //#define FULLSCREEN_TRIANGLE_CULLING
 // 			float3 g_CameraPositionWS;
 // 			StructuredBuffer<uint> g_PrimitiveVisibility;
@@ -307,7 +312,7 @@ Shader "TexelShading/Standard"
 // #ifdef FULLSCREEN_TRIANGLE_CULLING
 // 				
 // 				uint baseIndex, subIndex;
-// 				GetVisiblityIDIndicies(_ObjectID_b[0], primID, /*out*/ baseIndex, /*out*/ subIndex);
+// 				GetVisiblityIDIndicies(_ObjectID_b, primID, /*out*/ baseIndex, /*out*/ subIndex);
 //
 // 				uint visiblity = g_PrimitiveVisibility[baseIndex] & (1 << subIndex);
 //

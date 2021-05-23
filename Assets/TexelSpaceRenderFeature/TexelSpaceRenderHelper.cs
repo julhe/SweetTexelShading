@@ -7,10 +7,10 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 {
 
     MeshRenderer meshRenderer;
-    public int objectID;
-    ComputeBuffer objectID_b, prev_objectID_b;
-    uint[] objectID_b_data = new uint[1];
-    uint[] prev_objectID_b_data = new uint[1];
+    public int objectID, previousID;
+    static readonly int ObjectIDB = Shader.PropertyToID("_ObjectID_b");
+    static readonly int PrevObjectIDB = Shader.PropertyToID("_prev_ObjectID_b");
+
     // Update is called once per frame
     void Update()
     {
@@ -19,11 +19,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 
     private void OnWillRenderObject()
     {
-        if(objectID_b == null)
-        {
-            objectID_b = new ComputeBuffer(1, sizeof(int));
-            prev_objectID_b = new ComputeBuffer(1, sizeof(int));
-        }
+
         //Bounds bounds = GetComponent<MeshRenderer>().bounds;
 
         //Vector3 center_ScreenSpace = activeCam.WorldToScreenPoint(bounds.center);
@@ -42,18 +38,15 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         }
     }
 
-    public void SetAtlasProperties(int objectID)
+    public void SetAtlasProperties(int newObjectID)
     {
         MaterialPropertyBlock matProbBlock = new MaterialPropertyBlock();
 
-        prev_objectID_b_data[0] = (uint) this.objectID;
-        prev_objectID_b.SetData(prev_objectID_b_data);
-        this.objectID = objectID;
-        objectID_b_data[0] = (uint) objectID;
-        objectID_b.SetData(objectID_b_data);
+        previousID = objectID;
+        objectID = newObjectID;
 
-        matProbBlock.SetBuffer("_ObjectID_b", objectID_b);
-        matProbBlock.SetBuffer("_prev_ObjectID_b", prev_objectID_b);
+        matProbBlock.SetInt(ObjectIDB,objectID);
+        matProbBlock.SetInt(PrevObjectIDB, newObjectID);
         if (meshRenderer != null)
         {
             meshRenderer.SetPropertyBlock(matProbBlock);
