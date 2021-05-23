@@ -32,7 +32,8 @@ void InitalizePrimitiveVisiblity(uint3 id : SV_DispatchThreadID, uint groupIndex
 	g_PrimitiveVisibility[id.x] = 0;
 }
 
-// reads the VisibilityBuffer and extracts the visible triangles
+// reads the VisibilityBuffer RenderTarget and extracts the visible triangles and the highest MipMap level per object
+// This information is written into an append buffer, which is futher processed in "MipMapFinalize"
 // -----------------------------------------------------------------------------
 #pragma kernel ExtractCoverage
 Texture2D<uint> g_VisibilityBuffer;
@@ -43,7 +44,7 @@ AppendStructuredBuffer<uint> g_ObjectMipMap_append;
 [numthreads(COMPUTE_COVERAGE_TILE_SIZE, COMPUTE_COVERAGE_TILE_SIZE,1)]
 void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
-	// initalize shared_Object_MipmapLevel
+	// initalize shared_Object_MipmapLevel 
 	for (int i = 0; i < MAXIMAL_OBJECTS_PER_VIEW / (COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE); i++)
 	{
 		shared_Object_MipmapLevel[groupIndex + i * COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE] = 0;
@@ -97,6 +98,7 @@ void ExtractCoverage (uint3 id : SV_DispatchThreadID, uint groupIndex : SV_Group
 
 }
 
+// 
 #pragma kernel MipMapMeltDown
 ConsumeStructuredBuffer<uint> g_ObjectMipMap_consume;
 [numthreads(COMPUTE_COVERAGE_TILE_SIZE, COMPUTE_COVERAGE_TILE_SIZE, 1)]
@@ -144,7 +146,6 @@ void MipMapFinalize(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIn
 	for (int j = 0; j < g_ObjectMipMapCounterValue[0]; j += COMPUTE_COVERAGE_TILE_SIZE * COMPUTE_COVERAGE_TILE_SIZE)
 	{
 		uint objectID, primitiveID, mipmapLevel;
-
 		DecodeVisibilityBuffer(
 			g_ObjectMipMap_consume.Consume(),
 			/*out*/ objectID,
@@ -236,9 +237,12 @@ float4 GetUVToAtlasScaleOffset(float4 atlasPixelSpace)
 }
 
 #pragma kernel AtlasPacking
+// computes the rects for the object on the atlas-texture
 
 uint g_atlasAxisSize;
 groupshared uint gshared_atlasIndex;
+// this is currently a single(!) compute thread, but since this sections even takes ~0.03ms on a oculus quest
+// there is not much interest to change that
 [numthreads(1,1,1)] 
 void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
@@ -252,7 +256,7 @@ void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupInde
     [unroll]
 	for (uint j = ATLAS_OBJECT_SIZEEXPONENT_MAX; ATLAS_OBJECT_SIZEEXPONENT_MIN <= j; j--)
 	{
-        //offset by 1, since 0 is undefined
+        //offset by 1, since 0 means undefined
         for (uint i = groupIndex + 1; i < g_totalObjectsInView; i++)
 		{
 			uint objectTileAxisExponent = g_ObjectToAtlasProperties[i].sizeExponent;

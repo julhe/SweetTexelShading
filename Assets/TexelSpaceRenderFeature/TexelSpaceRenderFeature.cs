@@ -9,6 +9,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	public float AtlasResolutionScale = 1024f;
 	[Range(0.125f, 1f)] public float VisiblityPassScale = 1f;
 	public ComputeShader TssComputeShader;
+
+	public bool VisiblityComputeOnTheFly;
 	TexelSpaceShadingPass texelSpaceShadingPass;
 
 
@@ -91,6 +93,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	class VisibilityPass : ScriptableRenderPass {
 		public float AtlasResolutionScale, VisiblityPassScale = 1f;
 		public int AtlasSizeExponent = 10;
+		public bool VisiblityComputeOnTheFly;
 
 		ComputeBuffer
 			g_PrimitiveVisibility,
@@ -223,7 +226,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 				cmd.SetGlobalFloat("g_atlasMorph", 0.5f);
 				cmd.SetGlobalFloat("g_AtlasSizeExponent", AtlasSizeExponent);
 				// =====================================================================================================
-				// CopyDataToPreFrameBuffer
+				// Copy "AtlasData" to "Prev AtlasData" (TODO: just swap the reference them!)
 				// =====================================================================================================
 				cmd.SetComputeBufferParam(
 					ComputeShader, 
