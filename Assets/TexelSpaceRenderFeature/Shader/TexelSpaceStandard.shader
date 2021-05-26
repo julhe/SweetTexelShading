@@ -82,13 +82,23 @@ Shader "TexelShading/Standard"
 		#include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
 		#pragma enable_d3d11_debug_symbols
+
+		#define TSS_VISIBLITY_BY_CPU
 		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
 		StructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
+		RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
 		uint _ObjectID_b, _prev_ObjectID_b; 
 	
 		float g_AtlasResolutionScale;
 		sampler2D g_prev_VistaAtlas, g_VistaAtlas;
 		float4 g_VistaAtlas_ST;
+
+		float4 _VistaAtlasScaleOffset;
+		float4 GetObjectAtlasScaleOffset()
+		{
+			return _VistaAtlasScaleOffset;
+			// return g_ObjectToAtlasProperties[_ObjectID_b].atlas_ST;
+		}
 		ENDHLSL
 		Pass
 		{
@@ -96,6 +106,7 @@ Shader "TexelShading/Standard"
 			HLSLPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma target 5.0
 
 			//--------------------------------------
             // GPU Instancing
@@ -126,7 +137,7 @@ Shader "TexelShading/Standard"
 				return output;
 			}
 			
-			RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
+			
 			uint4 frag(v2f i, uint primID : SV_PrimitiveID) : SV_Target
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
@@ -138,14 +149,13 @@ Shader "TexelShading/Standard"
 				float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
 				rawMipMapLevel = min(log2(rawMipMapLevel) * 1, g_AtlasSizeExponent);
 
-				uint clusterID = floor(i.uv.x * 8 *8 + i.uv.y * 8);
+				uint clusterID = floor(i.uv.x * 8 * 8 + i.uv.y * 8);
 				uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
-				uint objectID = _ObjectID_b;
 
 				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
 				// note: it's still possible that a part with a high mipmap level is occluded later! 
-				// InterlockedMax(g_ObjectToAtlasPropertiesRW[objectID].desiredAtlasSpace_axis, mipMapLevel);
-				return EncodeVisibilityBuffer(objectID, primID, mipMapLevel);
+				InterlockedMax(g_ObjectToAtlasPropertiesRW[_ObjectID_b].sizeExponent, mipMapLevel);
+				return EncodeVisibilityBuffer(_ObjectID_b, primID, mipMapLevel);
 			}
 			ENDHLSL
 		}
@@ -158,6 +168,7 @@ Shader "TexelShading/Standard"
 				
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma target 5.0
 
 			//--------------------------------------
             // GPU Instancing
@@ -168,6 +179,7 @@ Shader "TexelShading/Standard"
 			{
 				float2 uv : TEXCOORD0;
 				float2 uvPrev : TEXCOORD1;
+				float2 uvRaw : TEXCOORD2;
 				float4 positionCS : SV_POSITION;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
@@ -183,12 +195,13 @@ Shader "TexelShading/Standard"
 				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
 				
 				output.positionCS = vertexInput.positionCS;
-				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b].atlas_ST;
+				output.uvRaw = input.lightmapUV;
+				
+				const float4 atlasScaleOffset = GetObjectAtlasScaleOffset(); 
 				output.uv = input.lightmapUV * atlasScaleOffset.xy + atlasScaleOffset.zw;
 				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b].atlas_ST;
 				output.uvPrev = (input.lightmapUV * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
 
-				//output.uv = input.lightmapUV;
 				return output;
 			}
 
@@ -208,8 +221,22 @@ Shader "TexelShading/Standard"
 				//atlasB.rgb = SimpleTonemapInverse(atlasB.rgb);
 
 
-				float4 finalColor = lerp(atlasA, atlasB, g_atlasMorph);
+				#ifndef TSS_VISIBLITY_BY_CPU
+					float4 finalColor = lerp(atlasA, atlasB, g_atlasMorph);
+					
+					// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
+					// note: it's still possible that a part with a high mipmap level is occluded later!
 
+					float2 dx = ddx(i.uvRaw * g_AtlasResolutionScale);
+					float2 dy = ddy(i.uvRaw * g_AtlasResolutionScale);
+
+					// classic mipmap-level calculation
+					float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
+					rawMipMapLevel = min(log2(rawMipMapLevel), g_AtlasSizeExponent);
+					uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
+					InterlockedMax(g_ObjectToAtlasPropertiesRW[_ObjectID_b].sizeExponent, mipMapLevel);
+					g_ObjectToAtlasPropertiesRW[_ObjectID_b].atlas_ST = 0;
+				#endif
 				//finalColor.rgb = TonemappingACES(finalColor.rgb);
 				return atlasB;
 			}
@@ -232,7 +259,7 @@ Shader "TexelShading/Standard"
 
             HLSLPROGRAM
             //#pragma only_renderers gles gles3 glcore
-            #pragma target 2.0
+            #pragma target 5.0
 
             // -------------------------------------
             // Material Keywords
@@ -286,7 +313,7 @@ Shader "TexelShading/Standard"
 				// now use the lightmap uv as the output uv
 				// clamp uv map to prevent bad uv-unwrapping from messing up the atlas and massively decrease the performance
 				float2 atlasCoord = saturate(input.lightmapUV);
-				const float4 atlasScaleOffset = g_ObjectToAtlasProperties[_ObjectID_b].atlas_ST;
+				const float4 atlasScaleOffset = GetObjectAtlasScaleOffset();
 				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
 				//TODO: also for D3D12, etc...
 				#if defined(SHADER_API_D3D11) 

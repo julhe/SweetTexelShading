@@ -53,9 +53,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   AtlasSizeExponent: 11
-  AtlasResolutionScale: 16389
-  VisiblityPassScale: 0.25
+  AtlasResolutionScale: 4096
+  VisiblityPassScale: 1
   TssComputeShader: {fileID: 7200000, guid: c95f3716fba8afd4cbff02f3e8708ae5, type: 3}
+  VisiblityMode: 2
   visibleObjects: []
 --- !u!114 &11400000
 MonoBehaviour:

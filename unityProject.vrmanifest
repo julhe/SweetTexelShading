@@ -1,0 +1,16 @@
+{
+  "source": "Unity",
+  "applications": [
+    {
+      "app_key": "application.generated.unity.superfancyrenderloop.exe",
+      "launch_type": "url",
+      "url": "steam://launch/",
+      "action_manifest_path": "C:\\Users\\Julian\\wkspaces\\PERSONAL\\SweetTexelShading\\Assets\\StreamingAssets\\SteamVR\\actions.json",
+      "strings": {
+        "en_us": {
+          "name": "SuperFancyRenderLoop [Testing]"
+        }
+      }
+    }
+  ]
+}

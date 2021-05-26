@@ -276,11 +276,13 @@ void AtlasPacking(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupInde
     }
 }
 
-
-
-#pragma kernel GetPixels
+#pragma kernel ResetSizeExponent
 [numthreads(SINGLE_ROW_THREAD_SIZE, 1, 1)]
-void GetPixels(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
-{
+void ResetSizeExponent(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex) {
+	uint buffer_length, buffer_stride;
+	g_ObjectToAtlasProperties.GetDimensions(buffer_length, buffer_stride);
 
+	if(id.x < buffer_length) {
+		g_ObjectToAtlasProperties[id.x].sizeExponent = 0;
+	}
 }
