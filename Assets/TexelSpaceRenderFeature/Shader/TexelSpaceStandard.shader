@@ -92,6 +92,7 @@ Shader "TexelShading/Standard"
 		float g_AtlasResolutionScale;
 		sampler2D g_prev_VistaAtlas, g_VistaAtlas;
 		float4 g_VistaAtlas_ST;
+		float3 _CameraForwardDirection; //TODO: can be taken from the camera view matrix?
 
 		float4 _VistaAtlasScaleOffset;
 		float4 GetObjectAtlasScaleOffset()
@@ -154,7 +155,7 @@ Shader "TexelShading/Standard"
 
 				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
 				// note: it's still possible that a part with a high mipmap level is occluded later! 
-				InterlockedMax(g_ObjectToAtlasPropertiesRW[_ObjectID_b].sizeExponent, mipMapLevel);
+				// InterlockedMax(g_ObjectToAtlasPropertiesRW[_ObjectID_b].sizeExponent, mipMapLevel);
 				return EncodeVisibilityBuffer(_ObjectID_b, primID, mipMapLevel);
 			}
 			ENDHLSL
@@ -324,6 +325,18 @@ Shader "TexelShading/Standard"
 				return output;
 			}
 
+            half4 TssLitPassFragment(Varyings input) : SV_Target{
+                UNITY_SETUP_INSTANCE_ID(input);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+            	// might be a bad idea...
+            	if(dot(input.normalWS, _CameraForwardDirection) > 0.5)
+            	{
+            		return 0.0;
+            	} 
+            	
+            	return LitPassFragment(input);
+            }
             
 // //#define FULLSCREEN_TRIANGLE_CULLING
 // 			float3 g_CameraPositionWS;

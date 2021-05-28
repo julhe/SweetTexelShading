@@ -52,8 +52,9 @@ MonoBehaviour:
   m_Name: NewTexelSpaceRenderFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  AtlasSizeExponent: 11
+  AtlasSizeExponent: 12
   AtlasResolutionScale: 4096
+  AtlasTimeSlicing: 1
   VisiblityPassScale: 1
   TssComputeShader: {fileID: 7200000, guid: c95f3716fba8afd4cbff02f3e8708ae5, type: 3}
   VisiblityMode: 2

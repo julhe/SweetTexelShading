@@ -27,7 +27,8 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 
         // To determine uv scale for a material use Material.GetTextureScale
         // If there is a uv scale to apply then divide the m_MeshUVDistributionMetric by (uvScale.x * uvScale.y)
-       
+        meshRenderer = GetComponent<MeshRenderer>();
+
     }
     
     // Update is called once per frame
@@ -76,6 +77,8 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         if (meshRenderer != null)
         {
             meshRenderer.SetPropertyBlock(matProbBlock);
+            meshRenderer.renderingLayerMask = (uint) (1 << Random.Range(0, 3));
+           
         }
     }
 
