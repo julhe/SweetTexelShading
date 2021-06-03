@@ -40,19 +40,8 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         meshRenderer = GetComponent<MeshRenderer>();
     }
 
-    private void OnWillRenderObject()
+    void OnWillRenderObject()
     {
-
-        //Bounds bounds = GetComponent<MeshRenderer>().bounds;
-
-        //Vector3 center_ScreenSpace = activeCam.WorldToScreenPoint(bounds.center);
-        //Vector3 max_ScreenSpace = activeCam.WorldToScreenPoint(bounds.max);
-        //diameter = Vector3.Distance(center_ScreenSpace, max_ScreenSpace) * 2f;
-
-        //screenArea = projectSphere(getBoundingSphere(), activeCam.worldToCameraMatrix, BasicRenderpipeline.CURRENT_CAMERA_FOCAL_LENGTH);
-        //if (!lockAtlasSize)
-        //    atlasSize = Mathf.Clamp(Mathf.NextPowerOfTwo((int)(screenArea /2f)), BasicRenderpipeline.ATLAS_TILE_SIZE, 1024);
-
         if (TexelSpaceRenderFeature.instance != null) {
             TexelSpaceRenderFeature.instance.AddObject(this);
         }
