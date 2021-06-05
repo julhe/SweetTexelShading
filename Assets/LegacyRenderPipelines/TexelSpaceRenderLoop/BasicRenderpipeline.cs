@@ -455,7 +455,7 @@ public class BasicRenderpipeline : RenderPipeline {
 				atlasAxisSize = m_asset.maximalAtlasSizePixel;
 
 				for (int i = 0; i < visibleObjects.Count; i++) {
-					visibleObjects[i].SetAtlasProperties(i + 1); //objectID 0 is reserved for "undefined"
+					visibleObjects[i].SetAtlasProperties(i + 1, 1); //objectID 0 is reserved for "undefined"
 				}
 				
 				cmd3.SetComputeIntParam(m_ResolveCS, "g_totalObjectsInView", visibleObjects.Count + 1);

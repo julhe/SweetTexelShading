@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteInEditMode]
+[ExecuteInEditMode, DisallowMultipleComponent]
 public class TexelSpaceRenderHelper : MonoBehaviour
 {
 
@@ -55,9 +55,9 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         return CalculateMipmapLevel(GetComponent<Renderer>().bounds, m_MeshUVDistributionMetric, texelCount);
     }
     
-    public void SetAtlasProperties(int newObjectID) {
-       
+    public void SetAtlasProperties(int newObjectID, int maxLayerMaskIndex) {
 
+        maxLayerMaskIndex = Mathf.Max(maxLayerMaskIndex - 1, 0);
         previousID = objectID;
         objectID = newObjectID;
 
@@ -66,7 +66,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         if (meshRenderer != null)
         {
             meshRenderer.SetPropertyBlock(matProbBlock);
-            meshRenderer.renderingLayerMask = (uint) (1 << Random.Range(0, 3));
+            meshRenderer.renderingLayerMask = (uint) (1 << Random.Range(0, maxLayerMaskIndex));
            
         }
     }
