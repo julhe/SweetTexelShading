@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
@@ -38,6 +39,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	List<ObjectInAtlas> visibleObjectDesiredMipMap = new List<ObjectInAtlas>();
 
 	RenderTexture VistaAtlasA;
+	
+	
 
 	static void RenderTextureCreateOrChange(ref RenderTexture rt, int sizeExponent) {
 		int sizeXy = 1 << sizeExponent;
@@ -101,7 +104,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 				// =============================================================================================================
 				for (int i = 0; i < visibleObjects.Count; i++) {
 					visibleObjects[i]
-						.SetAtlasProperties(i + 1, (int) AtlasTimeSlicing); //objectID 0 is reserved for "undefined"
+						.SetAtlasProperties(i + 1, (uint) AtlasTimeSlicing); //objectID 0 is reserved for "undefined"
 				}
 
 				visibilityPass.VisibleObjects = visibleObjects.Count;
@@ -140,8 +143,13 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 						atlasCursor += objectTilesTotal;
 						visibleObjects[objectInAtlas.originalIndex].SetAtlasScaleOffset(textureRectInAtlas);
+						
+						// generate a layermask to distribute the gpu-workload among multiple frames
+						//TODO: take the shading denstiy into account
+						int maxLayerMask = Math.Max((int) AtlasTimeSlicing - 1, 0);
 						visibleObjects[objectInAtlas.originalIndex]
-							.SetAtlasProperties(objectInAtlas.originalIndex, (int) AtlasTimeSlicing);
+							.SetAtlasProperties(objectInAtlas.originalIndex, 
+								(uint) (1 << UnityEngine.Random.Range(0, maxLayerMask)));
 					}
 				}
 			}
@@ -283,7 +291,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			}
 		}
 
-		//TODO: merge command buffers to single one
 		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
 			CameraData cameraData = renderingData.cameraData;
 			int screenXpx = cameraData.camera.pixelWidth, screenYpx = cameraData.camera.pixelHeight;
@@ -478,10 +485,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 				InitalizePrimitiveVisiblity,
 				ResetSizeExponent;
 		}
-
-		static class CsKernels {
-			public static int ExtractVisiblity;
-		}
 	}
 
 	class TexelSpaceShadingPass : ScriptableRenderPass {
@@ -516,7 +519,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all);
 			filterSettings.renderingLayerMask = RenderLayerMask;
 			context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filterSettings);
-
+			
 			if (VisiblityComputeOnTheFly == VisibilitySource.GpuWithVistaPass) {
 				// soon, the vista pass will be rendern, so we setup the g_ObjectToAtlasProperties
 				CommandBuffer cmd = CommandBufferPool.Get("Texel-Shading Pass Post");
@@ -527,6 +530,14 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			}
 
 		#endregion
+		}
+	}
+
+	class FallbackForwardPass : ScriptableRenderPass {
+		
+		readonly ShaderTagId texelSpacePass = new ShaderTagId("Texel Space Pass");
+		public uint RenderLayerMask;
+		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
 		}
 	}
 
@@ -579,7 +590,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	//source: https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
 // "Insert" a 0 bit after each of the 16 low bits of x
 	uint Part1By1(uint x) {
-		x &= 0x0000ffff; // x = ---- ---- ---- ---- fedc ba98 7654 3210
+		x &= 0x0000ffff;				 // x = ---- ---- ---- ---- fedc ba98 7654 3210
 		x = (x ^ (x << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
 		x = (x ^ (x << 4)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
 		x = (x ^ (x << 2)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
@@ -589,7 +600,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 // Inverse of Part1By1 - "delete" all odd-indexed bits
 	uint Compact1By1(uint x) {
-		x &= 0x55555555; // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+		x &= 0x55555555;				 // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
 		x = (x ^ (x >> 1)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
 		x = (x ^ (x >> 2)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
 		x = (x ^ (x >> 4)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210

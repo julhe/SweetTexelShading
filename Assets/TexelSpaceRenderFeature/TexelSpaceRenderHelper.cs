@@ -10,8 +10,17 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     public int objectID, previousID;
     static readonly int ObjectIDB = Shader.PropertyToID("_ObjectID_b");
     static readonly int PrevObjectIDB = Shader.PropertyToID("_prev_ObjectID_b");
-    
+
+    // replace the entire shader instead of working with global shader keywords.
+    // not super elegant, but anything else is just too complicated.
+    // Could also do dynamic branching, but that could unnecessary increase the gpu registry pressure?
+    public Shader TssShader, FallbackShader;
+
+    public Material ReferenceMaterial;
+    public bool UpdateInstantiatedMaterial;
     MaterialPropertyBlock matProbBlock;
+
+
     public void Start()
     {
         matProbBlock = new MaterialPropertyBlock();
@@ -28,7 +37,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         // To determine uv scale for a material use Material.GetTextureScale
         // If there is a uv scale to apply then divide the m_MeshUVDistributionMetric by (uvScale.x * uvScale.y)
         meshRenderer = GetComponent<MeshRenderer>();
-
+        
     }
     
     // Update is called once per frame
@@ -38,6 +47,11 @@ public class TexelSpaceRenderHelper : MonoBehaviour
             matProbBlock = new MaterialPropertyBlock();
         }
         meshRenderer = GetComponent<MeshRenderer>();
+
+        if (UpdateInstantiatedMaterial) {
+            UpdateInstantiatedMaterial = false;
+            
+        }
     }
 
     void OnWillRenderObject()
@@ -55,9 +69,9 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         return CalculateMipmapLevel(GetComponent<Renderer>().bounds, m_MeshUVDistributionMetric, texelCount);
     }
     
-    public void SetAtlasProperties(int newObjectID, int maxLayerMaskIndex) {
+    public void SetAtlasProperties(int newObjectID, uint layerMask) {
 
-        maxLayerMaskIndex = Mathf.Max(maxLayerMaskIndex - 1, 0);
+
         previousID = objectID;
         objectID = newObjectID;
 
@@ -66,41 +80,15 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         if (meshRenderer != null)
         {
             meshRenderer.SetPropertyBlock(matProbBlock);
-            meshRenderer.renderingLayerMask = (uint) (1 << Random.Range(0, maxLayerMaskIndex));
-           
+            meshRenderer.renderingLayerMask = layerMask;
+
         }
     }
 
-    Vector4 getBoundingSphere()
-    {
-        Bounds bounds = GetComponent<MeshRenderer>().bounds;
-        float radius = Vector3.Distance(bounds.min, bounds.max) / 4f;
-        Vector4 result = (bounds.center);
-        result.w = radius;
-        return result;
+    public void SetUseTSS(bool useTss) {
+        
     }
-    private void OnDrawGizmosSelected()
-    {
-       // Bounds bounds = GetComponent<MeshRenderer>().bounds;
-        //Vector4 sphere = getBoundingSphere();
-        //Gizmos.DrawWireSphere(sphere, sphere.w);
-        //Gizmos.DrawWireCube(bounds.center, bounds.size);
-    }
-
-    // source: http://www.iquilezles.org/www/articles/sphereproj/sphereproj.htm
-    static float projectSphere(Vector4 sph,  // sphere in world space
-                     Matrix4x4 cam,  // camera matrix (world to camera)
-                     float fl) // projection (focal length)
-    {
-        // transform to camera space
-        Vector3 o = cam * sph;
-
-        float r2 = sph.w * sph.w;
-        float z2 = o.z * o.z;
-        float l2 = Vector3.Dot(o, o);
-
-        return -3.14159f * fl * fl * r2 * Mathf.Sqrt(Mathf.Abs((l2 - r2) / (r2 - z2))) / (r2 - z2);
-    }
+    
     // =================================================================================================================
     private Vector3 m_CameraPosition;
     private float m_CameraEyeToScreenDistanceSquared;
@@ -148,15 +136,12 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     }
 
     // Pick the larger two scales of the 3 components and multiply together
-    float GetLargestAreaScale(float x, float y, float z)
-    {
+    float GetLargestAreaScale(float x, float y, float z) {
         if (x > y) {
             return y > z ? x * y : x * z;
         }
-        else // x <= y
-        {
-            return x < z ? y * z : x * y;
-        }
+
+        return x < z ? y * z : x * y;
     }
 
     public void SetAtlasScaleOffset(Vector4 scaleOffset) {

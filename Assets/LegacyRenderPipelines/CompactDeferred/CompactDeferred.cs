@@ -33,7 +33,6 @@ public class CompactDeferred : RenderPipeline
     Vector2Int g_visibilityBuffer_dimension;
     const int kCameraDepthBufferBits = 32;
 
-    CameraComparer m_CameraComparer = new CameraComparer();
     int m_cs_ExtractVisibility, g_GBuffer0, g_GBuffer1, g_GBuffer2, g_GBuffer3, g_Depth, g_dummyRT, g_intermediate;
 
     CompactDeferredAsset m_asset;
@@ -99,7 +98,7 @@ public class CompactDeferred : RenderPipeline
         m_context = context;
         bool stereoEnabled = XRSettings.isDeviceActive;
         // Sort cameras array by camera depth
-        Array.Sort(cameras, m_CameraComparer);
+        //Array.Sort(cameras, m_CameraComparer);
         clusteredLightning.SetParameters(m_asset.froxelsX, m_asset.froxelsY, m_asset.froxelsZ);
 
         foreach (Camera camera in cameras)

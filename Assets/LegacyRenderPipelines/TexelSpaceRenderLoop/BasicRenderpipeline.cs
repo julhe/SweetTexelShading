@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if false
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
@@ -627,3 +628,4 @@ public class CameraComparer : IComparer<Camera> {
 		return (int) (rhs.depth - lhs.depth);
 	}
 }
+#endif

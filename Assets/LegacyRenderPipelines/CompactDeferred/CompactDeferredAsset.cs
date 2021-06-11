@@ -17,8 +17,7 @@ public class CompactDeferredAsset : RenderPipelineAsset
     public Shader resolveBlitShader;
     public bool UncompressedGBuffer = false;
     [Range(0.5f, 2f)] public float RenderScale = 1f;
-
-    public TexelSpaceDebugMode debugPass = TexelSpaceDebugMode.None;
+    
     public float memoryConsumption;
     public Texture2D[] dither;
     public Texture2D BlueYellowRedGradient;

@@ -8,7 +8,7 @@ using UnityEngine.XR;
 
 public class SimpleForward : RenderPipeline
 {
-    CameraComparer m_CameraComparer = new CameraComparer();
+   // CameraComparer m_CameraComparer = new CameraComparer();
     public static Camera CURRENT_CAMERA { get; private set; }
     private const string RENDERPIPELINE_NAME = "SimpleForward";
     static readonly ShaderTagId ForwardOpaquePass = new ShaderTagId("SimpleForward");
@@ -29,7 +29,7 @@ public class SimpleForward : RenderPipeline
     {
         context = context;
         bool stereoEnabled = XRSettings.isDeviceActive;
-        Array.Sort(cameras, m_CameraComparer);
+      //  Array.Sort(cameras, m_CameraComparer);
         clusteredLightning.SetParameters(asset.froxelsX, asset.froxelsY, asset.froxelsZ);
         foreach (Camera camera in cameras)
         {
