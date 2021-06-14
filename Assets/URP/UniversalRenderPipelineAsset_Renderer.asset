@@ -54,12 +54,14 @@ MonoBehaviour:
   m_Active: 1
   AtlasSizeExponent: 12
   AtlasResolutionScale: 4096
-  AtlasTimeSlicing: 15
+  AtlasTimeSlicing: 8
   MinResolution: 2
-  MaxResolution: 9
+  MaxResolution: 10
   VisiblityPassScale: 1
   TssComputeShader: {fileID: 7200000, guid: c95f3716fba8afd4cbff02f3e8708ae5, type: 3}
   VisiblityMode: 2
+  TexelSpaceShader: {fileID: 4800000, guid: 7f27f82cf9f984543bc6b6e423fd8164, type: 3}
+  FallbackShader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
   visibleObjects: []
 --- !u!114 &11400000
 MonoBehaviour:

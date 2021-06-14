@@ -315,7 +315,7 @@ Shader "TexelShading/Standard"
 				// clamp uv map to prevent bad uv-unwrapping from messing up the atlas and massively decrease the performance
 				float2 atlasCoord = saturate(input.lightmapUV);
 				const float4 atlasScaleOffset = GetObjectAtlasScaleOffset();
-				atlasCoord = (atlasCoord * atlasScaleOffset.xy) + atlasScaleOffset.zw;
+				atlasCoord = atlasCoord * atlasScaleOffset.xy + atlasScaleOffset.zw;
 				//TODO: also for D3D12, etc...
 				#if defined(SHADER_API_D3D11) 
 					atlasCoord.y = 1 - atlasCoord.y;

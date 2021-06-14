@@ -24,7 +24,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 	public VisibilitySource VisiblityMode;
 	ComputeBuffer g_ObjectToAtlasProperties;
-
+	public Shader TexelSpaceShader, FallbackShader;
+	
 	byte renderedFrames;
 
 	TexelSpaceShadingPass texelSpaceShadingPass;
@@ -36,12 +37,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	// 4: (Render) TexelSpace Render
 	// 5: (Render, URP) Present 
 	VisibilityPass visibilityPass;
-	List<ObjectInAtlas> visibleObjectDesiredMipMap = new List<ObjectInAtlas>();
-
+	List<TexelSpaceRenderHelper> objectsInCurrentAtlas = new List<TexelSpaceRenderHelper>();
 	RenderTexture VistaAtlasA;
-	
-	
-
 	static void RenderTextureCreateOrChange(ref RenderTexture rt, int sizeExponent) {
 		int sizeXy = 1 << sizeExponent;
 
@@ -112,53 +109,76 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			}
 			else {
 				bool shouldGenerateNewAtlas = timeSlicedFrameIndex == 0;
-				texelSpaceShadingPass.ShouldClearAltas = false; //s0houldGenerateNewAtlas;
+				texelSpaceShadingPass.ShouldClearAltas = true; 
 				if (shouldGenerateNewAtlas) {
 					// Estimate the size of the objects in the atlas
 					// =============================================================================================================
-					visibleObjectDesiredMipMap.Clear();
+					objectsInCurrentAtlas.Clear();
 					int atlasAxisSize = 1 << AtlasSizeExponent;
 					int atlasTexelSize = atlasAxisSize * atlasAxisSize;
 
+					//TODO: don't add objects which wouldn't fit into the atlas.
 					for (int i = 0; i < visibleObjects.Count; i++) {
 						int estimatedMipmap = visibleObjects[i].GetEstmatedMipMapLevel(
 							renderingData.cameraData.camera,
 							atlasTexelSize);
 						// GetEstmatedMipMapLevel calculates the mipmap starting from 0
 						estimatedMipmap = AtlasSizeExponent - Mathf.Max(estimatedMipmap, 0);
-						estimatedMipmap = Mathf.Clamp(estimatedMipmap, MinResolution, MaxResolution);
-						visibleObjectDesiredMipMap.Add(new ObjectInAtlas
-							{desiredExponent = estimatedMipmap, originalIndex = i});
+						//estimatedMipmap = Mathf.Clamp(estimatedMipmap, MinResolution, MaxResolution);
+						if (estimatedMipmap < MinResolution || estimatedMipmap > MaxResolution) {
+							continue;
+						}
+						visibleObjects[i].DesiredShadingDensityExponent = estimatedMipmap;
+						objectsInCurrentAtlas.Add(visibleObjects[i]);
 					}
 
-					visibleObjectDesiredMipMap = visibleObjectDesiredMipMap.OrderBy(x => x.desiredExponent).ToList();
+					objectsInCurrentAtlas = objectsInCurrentAtlas.OrderBy(x => x.DesiredShadingDensityExponent).ToList();
 					// Pack the atlas from the previous calculated objects
 					// =============================================================================================================
 					int atlasCursor = 0; //the current place where we are inserting into the atlas
-					foreach (ObjectInAtlas objectInAtlas in visibleObjectDesiredMipMap) {
-						int objectTilesAxis = (1 << objectInAtlas.desiredExponent) / (int) ATLAS_TILE_SIZE;
-						int objectTilesTotal = objectTilesAxis * objectTilesAxis;
-						Vector4 atlasRect = GetTextureRect((uint) atlasCursor, (uint) objectTilesAxis);
+					for (int i = 0; i < objectsInCurrentAtlas.Count; i++) {
+						TexelSpaceRenderHelper objectInAtlas = objectsInCurrentAtlas[i];
+						int occupiedTilesPerAxis = (1 << objectInAtlas.DesiredShadingDensityExponent) / (int) ATLAS_TILE_SIZE;
+						int occupiedTilesTotal = occupiedTilesPerAxis * occupiedTilesPerAxis;
+						Vector4 atlasRect = GetTextureRect((uint) atlasCursor, (uint) occupiedTilesPerAxis);
 						Vector4 textureRectInAtlas = GetUVToAtlasScaleOffset(atlasRect) / atlasAxisSize;
 
-						atlasCursor += objectTilesTotal;
-						visibleObjects[objectInAtlas.originalIndex].SetAtlasScaleOffset(textureRectInAtlas);
-						
+						atlasCursor += occupiedTilesTotal;
+						objectInAtlas.SetAtlasScaleOffset(textureRectInAtlas);
+
 						// generate a layermask to distribute the gpu-workload among multiple frames
 						//TODO: take the shading denstiy into account
 						int maxLayerMask = Math.Max((int) AtlasTimeSlicing - 1, 0);
-						visibleObjects[objectInAtlas.originalIndex]
-							.SetAtlasProperties(objectInAtlas.originalIndex, 
-								(uint) (1 << UnityEngine.Random.Range(0, maxLayerMask)));
+						objectInAtlas.TimeSliceIndex = UnityEngine.Random.Range(0, maxLayerMask);
+						objectInAtlas.SetAtlasProperties(i, (uint) (1 << objectInAtlas.TimeSliceIndex));
 					}
 				}
+				else {
+					texelSpaceShadingPass.ShouldClearAltas = false;
+				}
+
+				
+				foreach (TexelSpaceRenderHelper texelSpaceRenderHelper in visibleObjects) {
+					if (objectsInCurrentAtlas.Contains(texelSpaceRenderHelper)) {
+						bool isRenderedInAtlasOrWillBeThisFrame =
+							texelSpaceRenderHelper.TimeSliceIndex >= timeSlicedFrameIndex;
+						
+						// every object that hasn't been rendered into the atlas yet or isn't part of it, should use the fallback
+						texelSpaceRenderHelper.SetCanUseTexelSpaceCache(isRenderedInAtlasOrWillBeThisFrame);
+					}
+					else {
+						// object came into visibility while the atlas was still rendering or has a too high shading density. 
+						texelSpaceRenderHelper.SetCanUseTexelSpaceCache(false);
+					}
+				}
+				
 			}
 
 			// Enqueue Shading Pass
 			// =============================================================================================================
 			texelSpaceShadingPass.g_ObjectToAtlasProperties = g_ObjectToAtlasProperties;
 			texelSpaceShadingPass.VisiblityComputeOnTheFly = VisiblityMode;
-			texelSpaceShadingPass.RenderLayerMask = (uint) (1 << (int) timeSlicedFrameIndex);
+			texelSpaceShadingPass.RenderLayerMask = uint.MaxValue;// (uint) (1 << (int) timeSlicedFrameIndex);
 			RenderTextureCreateOrChange(ref VistaAtlasA, AtlasSizeExponent);
 			texelSpaceShadingPass.TargetAtlas = VistaAtlasA;
 			renderer.EnqueuePass(texelSpaceShadingPass);
@@ -175,9 +195,10 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	}
 
 
-	struct ObjectInAtlas {
-		public int desiredExponent, originalIndex;
-	}
+	//class ObjectInAtlas {
+	//	public int DesiredExponent, OriginalIndex, TimeSliceIndex;
+	//	public TexelSpaceRenderHelper TexelSpaceRenderHelper;
+	//}
 
 	class VisibilityPass : ScriptableRenderPass {
 		public readonly int g_PrimitiveVisibilityID = Shader.PropertyToID("g_PrimitiveVisibility");
