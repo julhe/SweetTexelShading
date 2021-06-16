@@ -18,6 +18,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	[Range(8, 13)] public int AtlasSizeExponent = 10;
 	public float AtlasResolutionScale = 1024f;
 	[Range(1, 32)] public uint AtlasTimeSlicing;
+	public uint UpdateInterval;
 	[Range(1, 10)] public int MinResolution = 2, MaxResolution = 12;
 	[Range(0.125f, 1f)] public float VisiblityPassScale = 1f;
 	public ComputeShader TssComputeShader;
@@ -25,6 +26,12 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	public VisibilitySource VisiblityMode;
 	ComputeBuffer g_ObjectToAtlasProperties;
 	public Shader TexelSpaceShader, FallbackShader;
+
+	public TssDebugView DebugView = TssDebugView.None;
+	public enum TssDebugView {
+		None,
+		ShowCachedSurfaces
+	}
 	
 	byte renderedFrames;
 
@@ -93,7 +100,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			unchecked {
 				renderedFrames++;
 			}
-
+			
 			uint timeSlicedFrameIndex = renderedFrames % (uint) Mathf.Max(AtlasTimeSlicing, 1);
 
 			if (VisiblityMode != VisibilitySource.CpuHeuristic) {
@@ -103,7 +110,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 					visibleObjects[i]
 						.SetAtlasProperties(i + 1, (uint) AtlasTimeSlicing); //objectID 0 is reserved for "undefined"
 				}
-
 				visibilityPass.VisibleObjects = visibleObjects.Count;
 				renderer.EnqueuePass(visibilityPass);
 			}
@@ -117,18 +123,33 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 					int atlasAxisSize = 1 << AtlasSizeExponent;
 					int atlasTexelSize = atlasAxisSize * atlasAxisSize;
 
+					int atlasTilesTotal = (atlasAxisSize / (int) ATLAS_TILE_SIZE);
+					atlasTilesTotal *= atlasTilesTotal;
+					int atlasTilesOccupied = 0;
+					
 					//TODO: don't add objects which wouldn't fit into the atlas.
 					for (int i = 0; i < visibleObjects.Count; i++) {
-						int estimatedMipmap = visibleObjects[i].GetEstmatedMipMapLevel(
+						int estimatedShadinDensityExponent = visibleObjects[i].GetEstmatedMipMapLevel(
 							renderingData.cameraData.camera,
 							atlasTexelSize);
 						// GetEstmatedMipMapLevel calculates the mipmap starting from 0
-						estimatedMipmap = AtlasSizeExponent - Mathf.Max(estimatedMipmap, 0);
+						estimatedShadinDensityExponent = AtlasSizeExponent - Mathf.Max(estimatedShadinDensityExponent, 0);
 						//estimatedMipmap = Mathf.Clamp(estimatedMipmap, MinResolution, MaxResolution);
-						if (estimatedMipmap < MinResolution || estimatedMipmap > MaxResolution) {
+						if (estimatedShadinDensityExponent < MinResolution || estimatedShadinDensityExponent > MaxResolution) {
 							continue;
 						}
-						visibleObjects[i].DesiredShadingDensityExponent = estimatedMipmap;
+						
+						
+						int objectTilesPerAxis = (1 << estimatedShadinDensityExponent) / (int) ATLAS_TILE_SIZE;
+						int objectTilesTotal = objectTilesPerAxis * objectTilesPerAxis;
+						if (atlasTilesOccupied + objectTilesTotal > atlasTilesTotal) {
+							// if the atlas is full, don't add any more objects
+							continue;
+						}
+
+						atlasTilesOccupied += objectTilesTotal;
+						
+						visibleObjects[i].DesiredShadingDensityExponent = estimatedShadinDensityExponent;
 						objectsInCurrentAtlas.Add(visibleObjects[i]);
 					}
 
@@ -179,6 +200,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			texelSpaceShadingPass.g_ObjectToAtlasProperties = g_ObjectToAtlasProperties;
 			texelSpaceShadingPass.VisiblityComputeOnTheFly = VisiblityMode;
 			texelSpaceShadingPass.RenderLayerMask = uint.MaxValue;// (uint) (1 << (int) timeSlicedFrameIndex);
+			texelSpaceShadingPass.TssDebugView = DebugView;
 			RenderTextureCreateOrChange(ref VistaAtlasA, AtlasSizeExponent);
 			texelSpaceShadingPass.TargetAtlas = VistaAtlasA;
 			renderer.EnqueuePass(texelSpaceShadingPass);
@@ -515,6 +537,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		public bool ShouldClearAltas;
 		public RenderTexture TargetAtlas;
 		public VisibilitySource VisiblityComputeOnTheFly;
+		public TssDebugView TssDebugView;
 
 		public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor) {
 			ConfigureTarget(TargetAtlas);
@@ -530,6 +553,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			{
 				CommandBuffer cmd = CommandBufferPool.Get("Texel-Shading Pass Pre");
 				cmd.SetGlobalVector("_CameraForwardDirection", renderingData.cameraData.camera.transform.forward);
+				cmd.SetGlobalFloat("_Tss_DebugView", TssDebugView == TssDebugView.ShowCachedSurfaces ? 1f: 0f);
 				context.ExecuteCommandBuffer(cmd);
 				CommandBufferPool.Release(cmd);
 			}
@@ -580,10 +604,13 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 #region TexelSpaceRenderHelperInterface
 
 	public static TexelSpaceRenderFeature instance;
-	public List<TexelSpaceRenderHelper> visibleObjects = new List<TexelSpaceRenderHelper>();
+	List<TexelSpaceRenderHelper> visibleObjects = new List<TexelSpaceRenderHelper>();
 
 	public void AddObject(TexelSpaceRenderHelper texelSpaceRenderHelper) {
-		visibleObjects.Add(texelSpaceRenderHelper);
+		if (isActive) {
+			
+			visibleObjects.Add(texelSpaceRenderHelper);
+		}
 	}
 
 #endregion

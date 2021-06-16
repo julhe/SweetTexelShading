@@ -26,12 +26,13 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     MaterialPropertyBlock matProbBlock;
     [Header("Debug - CPU Heuristic")] public int DesiredShadingDensityExponent;
     public int TimeSliceIndex;
+    public float m_MeshUVDistributionMetric;
     
-    public void Start()
+    public void OnEnable()
     {
         matProbBlock = new MaterialPropertyBlock();
         Mesh mesh = GetComponent<MeshFilter>().sharedMesh;
-        m_MeshUVDistributionMetric = mesh.GetUVDistributionMetric(0);
+        m_MeshUVDistributionMetric = mesh.GetUVDistributionMetric(1);
 
         // If the mesh has a transform scale or uvscale it would need to be applied here
 
@@ -42,7 +43,6 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 
         // To determine uv scale for a material use Material.GetTextureScale
         // If there is a uv scale to apply then divide the m_MeshUVDistributionMetric by (uvScale.x * uvScale.y)
-        meshRenderer = GetComponent<MeshRenderer>();
     }
     
     // Update is called once per frame
@@ -54,11 +54,15 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         if (matProbBlock == null) {
             matProbBlock = new MaterialPropertyBlock();
         }
-        meshRenderer = GetComponent<MeshRenderer>();
+
+        if (!TryGetComponent(out meshRenderer)) {
+            return;
+        }
+        
         
         if (InstantiatedMaterial == null || UpdateInstantiatedMaterial) {
             UpdateInstantiatedMaterial = false;
-            InstantiatedMaterial = new Material(meshRenderer.sharedMaterial) {
+            InstantiatedMaterial = new Material(ReferenceMaterial) {
                 hideFlags = HideFlags.DontSave
             };
             meshRenderer.sharedMaterial = InstantiatedMaterial;
@@ -75,6 +79,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
             TexelSpaceRenderFeature.instance.AddObject(this);
         }
         else {
+            //TODO: only send this warning every x seconds to avoid Log spam with many objects
             Debug.LogWarning($"No {nameof(TexelSpaceRenderFeature)} found.");
         }
     }
@@ -97,14 +102,28 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     }
 
     public void SetCanUseTexelSpaceCache(bool canUssTexelSpaceCache) {
-        InstantiatedMaterial.shader = canUssTexelSpaceCache ? TssShader : FallbackShader;
+        if (InstantiatedMaterial == null) {
+            return;
+        }
+
+        if (canUssTexelSpaceCache) {
+            // switching the shader is COSTLY, so check if its really necessary
+            if (InstantiatedMaterial.shader != TssShader) {
+                InstantiatedMaterial.shader = TssShader; 
+            }
+        }
+        else {
+            // switching the shader is COSTLY, so check if its really necessary
+            if (InstantiatedMaterial.shader != FallbackShader) {
+                InstantiatedMaterial.shader = FallbackShader;
+            }
+        }
     }
     
     // =================================================================================================================
     private Vector3 m_CameraPosition;
     private float m_CameraEyeToScreenDistanceSquared;
 
-    private float m_MeshUVDistributionMetric;
     private float m_TexelCount;
     
     public void SetView(Camera camera) {

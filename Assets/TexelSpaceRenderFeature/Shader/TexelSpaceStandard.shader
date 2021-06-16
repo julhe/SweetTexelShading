@@ -207,6 +207,8 @@ Shader "TexelShading/Standard"
 			}
 
 			float g_atlasMorph;
+			
+            float _Tss_DebugView;
 			half4 frag(v2f i) : SV_Target
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
@@ -220,6 +222,8 @@ Shader "TexelShading/Standard"
 				float4 atlasB = tex2D(g_VistaAtlas, i.uv);		
 				atlasB.rgb /= atlasB.a;
 				//atlasB.rgb = SimpleTonemapInverse(atlasB.rgb);
+
+
 
 
 				#ifndef TSS_VISIBLITY_BY_CPU
@@ -239,7 +243,8 @@ Shader "TexelShading/Standard"
 					g_ObjectToAtlasPropertiesRW[_ObjectID_b].atlas_ST = 0;
 				#endif
 				//finalColor.rgb = TonemappingACES(finalColor.rgb);
-				return atlasB;
+
+				return lerp(atlasB , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView);
 			}
 			ENDHLSL
 		}
@@ -306,6 +311,7 @@ Shader "TexelShading/Standard"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
+
             Varyings TsLitPassVertex(Attributes input)
 			{
 				// run the original vertex pass
@@ -333,8 +339,7 @@ Shader "TexelShading/Standard"
             	if(dot(input.normalWS, _CameraForwardDirection) > 0.5)
             	{
             		return 0.0;
-            	} 
-            	
+            	}
             	return LitPassFragment(input);
             }
             
