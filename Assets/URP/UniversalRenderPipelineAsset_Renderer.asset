@@ -52,19 +52,18 @@ MonoBehaviour:
   m_Name: NewTexelSpaceRenderFeature
   m_EditorClassIdentifier: 
   m_Active: 1
-  AtlasSizeExponent: 11
+  AtlasSizeExponent: 10
   AtlasResolutionScale: 4096
-  AtlasTimeSlicing: 9
+  AtlasTimeSlicing: 2
   MinResolution: 7
   MaxResolution: 10
   VisiblityPassScale: 1
-  TssComputeShader: {fileID: 7200000, guid: c95f3716fba8afd4cbff02f3e8708ae5, type: 3}
   VisiblityMode: 2
-  TexelSpaceShader: {fileID: 4800000, guid: 7f27f82cf9f984543bc6b6e423fd8164, type: 3}
-  FallbackShader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
-  DebugView: 0
+  TssComputeShader: {fileID: 7200000, guid: c95f3716fba8afd4cbff02f3e8708ae5, type: 3}
   OverrideTimeSliceIndex: -1
-  ClearAtlasWithYellow: 1
+  DebugViewOverlay: 0
+  ClearAtlasWithRed: 0
+  AlwaysClearAtlas: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

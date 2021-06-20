@@ -92,6 +92,7 @@ Shader "TexelShading/Standard"
 		float g_AtlasResolutionScale;
 		sampler2D g_prev_VistaAtlas, g_VistaAtlas;
 		float4 g_VistaAtlas_ST;
+		float _Tss_DebugView;
 
 		float4 _VistaAtlasScaleOffset;
 		float4 GetObjectAtlasScaleOffset()
@@ -207,8 +208,7 @@ Shader "TexelShading/Standard"
 			}
 
 			float g_atlasMorph;
-			
-            float _Tss_DebugView;
+
 			half4 frag(v2f i) : SV_Target
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
@@ -234,7 +234,7 @@ Shader "TexelShading/Standard"
 				#endif
 				//finalColor.rgb = TonemappingACES(finalColor.rgb);
 
-				return lerp(atlas , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView * 0.5);
+				return lerp(atlas , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView);
 			}
 			ENDHLSL
 		}
@@ -297,7 +297,7 @@ Shader "TexelShading/Standard"
             #pragma multi_compile _ DOTS_INSTANCING_ON
 
             #pragma vertex TsLitPassVertex
-           // #pragma fragment frag
+            #pragma fragment frag
             #pragma fragment LitPassFragment
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
@@ -333,7 +333,8 @@ Shader "TexelShading/Standard"
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-				return float4(1,1,1,1);
+				half4 lit = LitPassFragment(i);
+				return lerp(lit , half4(1.0, 1.0, 1.0, 1.0), _Tss_DebugView);
 			}
 
 			ENDHLSL
@@ -392,8 +393,8 @@ Shader "TexelShading/Standard"
             #pragma multi_compile _ DOTS_INSTANCING_ON
 
             #pragma vertex LitPassVertex
-           #pragma fragment LitPassFragment
-         //   #pragma fragment frag
+           //#pragma fragment LitPassFragment
+            #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
@@ -401,7 +402,8 @@ Shader "TexelShading/Standard"
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-				return float4(0,0,1,1);
+				half4 lit = LitPassFragment(i);
+				return lerp(lit , half4(1.0, 1.0, 0.0, 1.0), _Tss_DebugView);
 			}
             ENDHLSL
 		}

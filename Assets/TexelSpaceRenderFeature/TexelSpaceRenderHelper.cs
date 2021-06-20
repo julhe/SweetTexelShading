@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 [ExecuteInEditMode, DisallowMultipleComponent]
 public class TexelSpaceRenderHelper : MonoBehaviour
@@ -46,9 +47,11 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         if (matProbBlock == null) {
             matProbBlock = new MaterialPropertyBlock();
         }
+
     }
 
     void OnWillRenderObject() {
+
         if (TexelSpaceRenderFeature.instance != null) {
             TexelSpaceRenderFeature.instance.AddObject(this);
         }
@@ -56,6 +59,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
             //TODO: only send this warning every x seconds to avoid Log spam with many objects
             Debug.LogWarning($"No {nameof(TexelSpaceRenderFeature)} found.");
         }
+
     }
 
     public int GetEstimatedMipMapLevel(Camera camera, int texelCount) {
