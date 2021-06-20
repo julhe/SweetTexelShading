@@ -15,7 +15,7 @@ EditorBuildSettings:
     path: Assets/TestingAssets/Scenes/Outside.unity
     guid: 950ba27624b84c5428c4c2df2bd4024e
   - enabled: 1
-    path: Assets/AssetStoreOriginals/_SNAPS_PrototypingAssets/SciFi_Industrial/SampleScenes/SciFi_Industrial_SampleLayout.unity
+    path: Assets/TestingAssets/_SNAPS_PrototypingAssets/SciFi_Industrial/SampleScenes/SciFi_Industrial_SampleLayout.unity
     guid: b2fa8882363c4644b93046de18bcbf19
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: aacfc0bbc1d13ad46ad95b66d738b49c,

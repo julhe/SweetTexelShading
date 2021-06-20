@@ -15,7 +15,6 @@ public class AutoTexelSpaceRenderHelper : MonoBehaviour {
 
 			if (!meshRenderer.TryGetComponent(out TexelSpaceRenderHelper texelSpaceRenderHelper)) {
 				var renderHelper = meshRenderer.gameObject.AddComponent<TexelSpaceRenderHelper>();
-				renderHelper.ReferenceMaterial = meshRenderer.sharedMaterial;
 			}
 		}
 	}

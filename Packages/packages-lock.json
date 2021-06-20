@@ -85,6 +85,13 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.postprocessing": {
+      "version": "2.3.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.probuilder": {
       "version": "5.0.3",
       "depth": 0,

@@ -92,7 +92,6 @@ Shader "TexelShading/Standard"
 		float g_AtlasResolutionScale;
 		sampler2D g_prev_VistaAtlas, g_VistaAtlas;
 		float4 g_VistaAtlas_ST;
-		float3 _CameraForwardDirection; //TODO: can be taken from the camera view matrix?
 
 		float4 _VistaAtlasScaleOffset;
 		float4 GetObjectAtlasScaleOffset()
@@ -164,7 +163,7 @@ Shader "TexelShading/Standard"
 		Pass
 			{
 			// aka PresentPass
-			Tags{ "LightMode" = "UniversalForward" }
+			Tags{ "LightMode" = "TSS Present-Pass" }
 			HLSLPROGRAM
 				
 			#pragma vertex vert
@@ -197,7 +196,8 @@ Shader "TexelShading/Standard"
 				
 				output.positionCS = vertexInput.positionCS;
 				output.uvRaw = input.lightmapUV;
-				
+
+
 				const float4 atlasScaleOffset = GetObjectAtlasScaleOffset(); 
 				output.uv = input.lightmapUV * atlasScaleOffset.xy + atlasScaleOffset.zw;
 				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b].atlas_ST;
@@ -213,18 +213,8 @@ Shader "TexelShading/Standard"
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-				//return float4(i.uv, 0, 1);
-				
-				float4 atlasA = tex2D(g_prev_VistaAtlas, i.uvPrev);
-				//atlasA.rgb /= atlasA.a;
-				//atlasA.rgb = SimpleTonemapInverse(atlasA.rgb);
-
-				float4 atlasB = tex2D(g_VistaAtlas, i.uv);		
-				atlasB.rgb /= atlasB.a;
-				//atlasB.rgb = SimpleTonemapInverse(atlasB.rgb);
-
-
-
+				half4 atlas = tex2D(g_VistaAtlas, i.uv);		
+				atlas.rgb /= atlas.a;
 
 				#ifndef TSS_VISIBLITY_BY_CPU
 					float4 finalColor = lerp(atlasA, atlasB, g_atlasMorph);
@@ -244,14 +234,14 @@ Shader "TexelShading/Standard"
 				#endif
 				//finalColor.rgb = TonemappingACES(finalColor.rgb);
 
-				return lerp(atlasB , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView);
+				return lerp(atlas , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView * 0.5);
 			}
 			ENDHLSL
 		}
 
 		Pass
 		{
-
+			// A copy of the "Universal Render Pipeline/Lit" but with a custom vertex shader to map into atlas-space
 			// Shading pass
 			// Reuses the URP Code path to render to the atlas.
 			// Right now, it only does adjust the output vertex coordinates from the vertex shader.
@@ -259,13 +249,14 @@ Shader "TexelShading/Standard"
 			Tags{"LightMode" = "Texel Space Pass"}
 			
 			//Blend[_SrcBlend][_DstBlend]
+			Blend Off
             ZWrite Off
 			ZTest Off
             Cull Off
 
             HLSLPROGRAM
-            //#pragma only_renderers gles gles3 glcore
-            #pragma target 5.0
+            #pragma exclude_renderers gles gles3 glcore
+            #pragma target 4.5
 
             // -------------------------------------
             // Material Keywords
@@ -306,11 +297,11 @@ Shader "TexelShading/Standard"
             #pragma multi_compile _ DOTS_INSTANCING_ON
 
             #pragma vertex TsLitPassVertex
+           // #pragma fragment frag
             #pragma fragment LitPassFragment
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
-
 
             Varyings TsLitPassVertex(Attributes input)
 			{
@@ -328,107 +319,91 @@ Shader "TexelShading/Standard"
 				#endif
 			
 				output.positionCS = float4(atlasCoord * 2.0 - 1.0, 0.0, 1.0);
+
+				// cull back facing geometry with a dirty trick...
+				if(dot(output.normalWS, output.viewDirWS) < 0.0) {
+					output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be renderd
+					//TODO: verify behaviour on Quest.
+				}
+
 				return output;
 			}
 
-            half4 TssLitPassFragment(Varyings input) : SV_Target{
-                UNITY_SETUP_INSTANCE_ID(input);
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-
-            	// might be a bad idea...
-            	if(dot(input.normalWS, _CameraForwardDirection) > 0.5)
-            	{
-            		return 0.0;
-            	}
-            	return LitPassFragment(input);
-            }
-            
-// //#define FULLSCREEN_TRIANGLE_CULLING
-// 			float3 g_CameraPositionWS;
-// 			StructuredBuffer<uint> g_PrimitiveVisibility;
-//
-//
-// 			[maxvertexcount(3)]
-// 			void geom(triangle v2f_surf p[3], inout TriangleStream<v2f_surf> triStream, in uint primID : SV_PrimitiveID)
-// 			{
-// 				float visiblity = 1;
-// #ifdef TRIANGLE_CULLING
-// 				
-// #ifdef FULLSCREEN_TRIANGLE_CULLING
-// 				
-// 				uint baseIndex, subIndex;
-// 				GetVisiblityIDIndicies(_ObjectID_b, primID, /*out*/ baseIndex, /*out*/ subIndex);
-//
-// 				uint visiblity = g_PrimitiveVisibility[baseIndex] & (1 << subIndex);
-//
-// #else
-// 				// backface culling
-// 				float3 faceCenterWS =
-// 					float3(p[0].tSpace0.w, p[0].tSpace1.w, p[0].tSpace2.w) +
-// 					float3(p[1].tSpace0.w, p[1].tSpace1.w, p[1].tSpace2.w) +
-// 					float3(p[2].tSpace0.w, p[2].tSpace1.w, p[2].tSpace2.w);
-// 				faceCenterWS /= 3.0;
-// 				float3 viewDirWS = normalize(_WorldSpaceCameraPos - faceCenterWS);
-// 				float3 faceNormalWS = float3(p[0].tSpace0.z, p[0].tSpace1.z, p[0].tSpace2.z);
-// 				//float3 averageNormal = normalize(p[0].tSpace0 + p[1].tSpace0 + p[2].tSpace0);
-//
-// 				visiblity = dot(faceNormalWS, viewDirWS);
-// #endif
-// #endif
-// 				if (visiblity > 0)
-// 				{
-// 					v2f_surf p0 = p[0];
-// 					v2f_surf p1 = p[1];
-// 					v2f_surf p2 = p[2];
-//
-// #ifdef DIALATE_TRIANGLES
-// 					// do conservative raserization 
-// 					// source: https://github.com/otaku690/SparseVoxelOctree/blob/master/WIN/SVO/shader/voxelize.geom.glsl
-// 					//Next we enlarge the triangle to enable conservative rasterization
-// 					float4 AABB;
-// 					float2 hPixel = float2(1.0 / _ScreenParams.x, 1.0 / _ScreenParams.y);
-// 					float pl = 1.4142135637309 / ( max(_ScreenParams.x, _ScreenParams.y));
-//
-// 					//calculate AABB of this triangle
-// 					AABB.xy = p0.pos.xy;
-// 					AABB.zw = p0.pos.xy;
-//
-// 					AABB.xy = min(p1.pos.xy, AABB.xy);
-// 					AABB.zw = max(p1.pos.xy, AABB.zw);
-//
-// 					AABB.xy = min(p2.pos.xy, AABB.xy);
-// 					AABB.zw = max(p2.pos.xy, AABB.zw);
-//
-// 					//Enlarge half-pixel
-// 					AABB.xy -= hPixel;
-// 					AABB.zw += hPixel;
-//
-// 					//find 3 triangle edge plane
-// 					float3 e0 = float3(p1.pos.xy - p0.pos.xy, 0);
-// 					float3 e1 = float3(p2.pos.xy - p1.pos.xy, 0);
-// 					float3 e2 = float3(p0.pos.xy - p2.pos.xy, 0);
-// 					float3 n0 = cross(e0, float3(0, 0, 1));
-// 					float3 n1 = cross(e1, float3(0, 0, 1));
-// 					float3 n2 = cross(e2, float3(0, 0, 1));
-//
-// 					//dilate the triangle
-// 					// julian: I can't figure out why the dilate-offset sometimes produces insane distorted triangels
-// 					// so I normalize the offset, which works pretty well so far
-// 					p0.pos.xy += pl*normalize((e2.xy / dot(e2.xy, n0.xy)) + (e0.xy / dot(e0.xy, n2.xy)));
-// 					p1.pos.xy += pl*normalize((e0.xy / dot(e0.xy, n1.xy)) + (e1.xy / dot(e1.xy, n0.xy)));
-// 					p2.pos.xy += pl*normalize((e1.xy / dot(e1.xy, n2.xy)) + (e2.xy / dot(e2.xy, n1.xy)));
-// #endif
-// 					triStream.Append(p0);
-// 					triStream.Append(p1);
-// 					triStream.Append(p2);
-// 				}
-//
-//
-// 				triStream.RestartStrip();
-// 			}
-
+            half4 frag(Varyings i) : SV_Target
+			{
+				UNITY_SETUP_INSTANCE_ID(i);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+				return float4(1,1,1,1);
+			}
 
 			ENDHLSL
+		}
+		
+		Pass {
+			// A copy of the "Universal Render Pipeline/Lit" but with a different LightMode to make it controllable
+			// can't make a shader variant of "Texel Space Pass", 
+			// because "Cull" needs to be off for the texel-space pass, but its not possible to override this from the Scriptable Render Pass
+			Tags{"LightMode" = "Forward Fallback"}
+
+			Blend[_SrcBlend][_DstBlend]
+            ZWrite[_ZWrite]
+            Cull[_Cull]
+
+            HLSLPROGRAM
+            #pragma exclude_renderers gles gles3 glcore
+            #pragma target 4.5
+
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature_local _NORMALMAP
+            #pragma shader_feature_local_fragment _ALPHATEST_ON
+            #pragma shader_feature_local_fragment _ALPHAPREMULTIPLY_ON
+            #pragma shader_feature_local_fragment _EMISSION
+            #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
+            #pragma shader_feature_local_fragment _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+            #pragma shader_feature_local_fragment _OCCLUSIONMAP
+            #pragma shader_feature_local _PARALLAXMAP
+            #pragma shader_feature_local _ _DETAIL_MULX2 _DETAIL_SCALED
+            #pragma shader_feature_local_fragment _SPECULARHIGHLIGHTS_OFF
+            #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
+            #pragma shader_feature_local_fragment _SPECULAR_SETUP
+            #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
+
+            // -------------------------------------
+            // Universal Pipeline keywords
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+            #pragma multi_compile _ LIGHTMAP_SHADOW_MIXING
+            #pragma multi_compile _ SHADOWS_SHADOWMASK
+
+            // -------------------------------------
+            // Unity defined keywords
+            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile _ LIGHTMAP_ON
+            #pragma multi_compile_fog
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ DOTS_INSTANCING_ON
+
+            #pragma vertex LitPassVertex
+           #pragma fragment LitPassFragment
+         //   #pragma fragment frag
+
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
+            half4 frag(Varyings i) : SV_Target
+			{
+				UNITY_SETUP_INSTANCE_ID(i);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+				return float4(0,0,1,1);
+			}
+            ENDHLSL
 		}
 
 

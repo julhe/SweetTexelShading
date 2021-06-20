@@ -6,43 +6,35 @@ using UnityEngine;
 [ExecuteInEditMode, DisallowMultipleComponent]
 public class TexelSpaceRenderHelper : MonoBehaviour
 {
-    [Header("Settings")]
-    public Material ReferenceMaterial;
- 
     MeshRenderer meshRenderer;
     [Header("Debug")] public int objectID;
     public int previousID;
 
     static readonly int ObjectIDB = Shader.PropertyToID("_ObjectID_b");
     static readonly int PrevObjectIDB = Shader.PropertyToID("_prev_ObjectID_b");
-
-    // replace the entire shader instead of working with global shader keywords.
-    // not super elegant, but anything else is just too complicated.
-    // Could also do dynamic branching, but that could unnecessary increase the gpu registry pressure?
-    Shader TssShader, FallbackShader;
-    Material InstantiatedMaterial;
-
-    public bool UpdateInstantiatedMaterial;
+    
     MaterialPropertyBlock matProbBlock;
     [Header("Debug - CPU Heuristic")] public int DesiredShadingDensityExponent;
     public int TimeSliceIndex;
-    public float m_MeshUVDistributionMetric;
+    public float MeshUVDistributionMetric;
+    public TexelSpaceObjectState TexelSpaceObjectState;
     
     public void OnEnable()
     {
         matProbBlock = new MaterialPropertyBlock();
         Mesh mesh = GetComponent<MeshFilter>().sharedMesh;
-        m_MeshUVDistributionMetric = mesh.GetUVDistributionMetric(1);
+        MeshUVDistributionMetric = mesh.GetUVDistributionMetric(1);
 
         // If the mesh has a transform scale or uvscale it would need to be applied here
 
         // Transform scale:
         // Use two scale values as we need an 'area' scale.
         // Use the two largest component to usa a more conservative selection and pick the higher resolution mip
-        m_MeshUVDistributionMetric *= GetLargestAreaScale(transform.lossyScale.x, transform.lossyScale.y, transform.lossyScale.z);
+        MeshUVDistributionMetric *= GetLargestAreaScale(transform.lossyScale.x, transform.lossyScale.y, transform.lossyScale.z);
 
         // To determine uv scale for a material use Material.GetTextureScale
         // If there is a uv scale to apply then divide the m_MeshUVDistributionMetric by (uvScale.x * uvScale.y)
+        meshRenderer = GetComponent<MeshRenderer>();
     }
     
     // Update is called once per frame
@@ -54,24 +46,6 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         if (matProbBlock == null) {
             matProbBlock = new MaterialPropertyBlock();
         }
-
-        if (!TryGetComponent(out meshRenderer)) {
-            return;
-        }
-        
-        
-        if (InstantiatedMaterial == null || UpdateInstantiatedMaterial) {
-            UpdateInstantiatedMaterial = false;
-            InstantiatedMaterial = new Material(ReferenceMaterial) {
-                hideFlags = HideFlags.DontSave
-            };
-            meshRenderer.sharedMaterial = InstantiatedMaterial;
-        }
-
-        TssShader = TexelSpaceRenderFeature.instance.TexelSpaceShader;
-        FallbackShader = TexelSpaceRenderFeature.instance.FallbackShader;
-        InstantiatedMaterial.CopyPropertiesFromMaterial(ReferenceMaterial);
-        meshRenderer.sharedMaterial = InstantiatedMaterial;
     }
 
     void OnWillRenderObject() {
@@ -84,12 +58,12 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         }
     }
 
-    public int GetEstmatedMipMapLevel(Camera camera, int texelCount) {
+    public int GetEstimatedMipMapLevel(Camera camera, int texelCount) {
         SetView(camera);
-        return CalculateMipmapLevel(GetComponent<Renderer>().bounds, m_MeshUVDistributionMetric, texelCount);
+        return CalculateMipmapLevel(GetComponent<Renderer>().bounds, MeshUVDistributionMetric, texelCount);
     }
     
-    public void SetAtlasProperties(int newObjectID, uint layerMask) {
+    public void SetAtlasProperties(int newObjectID) {
         previousID = objectID;
         objectID = newObjectID;
 
@@ -97,27 +71,16 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         matProbBlock.SetInt(PrevObjectIDB, newObjectID);
         if (meshRenderer != null) {
             meshRenderer.SetPropertyBlock(matProbBlock);
-            meshRenderer.renderingLayerMask = layerMask;
         }
     }
 
-    public void SetCanUseTexelSpaceCache(bool canUssTexelSpaceCache) {
-        if (InstantiatedMaterial == null) {
+    public void SetTexelSpaceObjectState(TexelSpaceObjectState texelSpaceObjectState) {
+        if (meshRenderer == null) {
             return;
         }
 
-        if (canUssTexelSpaceCache) {
-            // switching the shader is COSTLY, so check if its really necessary
-            if (InstantiatedMaterial.shader != TssShader) {
-                InstantiatedMaterial.shader = TssShader; 
-            }
-        }
-        else {
-            // switching the shader is COSTLY, so check if its really necessary
-            if (InstantiatedMaterial.shader != FallbackShader) {
-                InstantiatedMaterial.shader = FallbackShader;
-            }
-        }
+        TexelSpaceObjectState = texelSpaceObjectState;
+        meshRenderer.renderingLayerMask = texelSpaceObjectState.ToRenderingLayerMask();
     }
     
     // =================================================================================================================
@@ -137,8 +100,10 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         m_CameraEyeToScreenDistanceSquared = Mathf.Pow(screenHalfHeight / Mathf.Tan(cameraHalfAngle), 2.0f);
 
         // Switch to using the horizontal dimension if larger
-        if (aspectRatio > 1.0f)    // Width is larger than height
+        if (aspectRatio > 1.0f) {
+            // Width is larger than height
             m_CameraEyeToScreenDistanceSquared *= aspectRatio;
+        }
     }
 
     

@@ -54,8 +54,7 @@ MonoBehaviour:
   m_Active: 1
   AtlasSizeExponent: 11
   AtlasResolutionScale: 4096
-  AtlasTimeSlicing: 4
-  UpdateInterval: 0
+  AtlasTimeSlicing: 9
   MinResolution: 7
   MaxResolution: 10
   VisiblityPassScale: 1
@@ -64,6 +63,8 @@ MonoBehaviour:
   TexelSpaceShader: {fileID: 4800000, guid: 7f27f82cf9f984543bc6b6e423fd8164, type: 3}
   FallbackShader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
   DebugView: 0
+  OverrideTimeSliceIndex: -1
+  ClearAtlasWithYellow: 1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
