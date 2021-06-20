@@ -17,7 +17,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	
 	[Header("Debug"), Range(-1, 10)]
 	public int OverrideTimeSliceIndex = -1;
-
 	[Range(0,1)] public float DebugViewOverlay = 0f;
 	public bool ClearAtlasWithRed;
 	public bool AlwaysClearAtlas;
@@ -30,7 +29,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	PresentPass presentPass;
 	FallbackPass fallbackPass; 
 	RenderTexture vistaAtlas;
-	public int AtlasSizeAxis => 1 << AtlasSizeExponent;
+	int AtlasSizeAxis => 1 << AtlasSizeExponent;
 
 	public override void Create() {
 		instance = this;
@@ -81,7 +80,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			atlasTilesTotal *= atlasTilesTotal;
 			int atlasTilesOccupied = 0;
 
-			//TODO: don't add objects which wouldn't fit into the atlas.
 			for (int i = 0; i < visibleObjects.Count; i++) {
 				int estimatedShadinDensityExponent = visibleObjects[i].GetEstimatedMipMapLevel(
 					renderingData.cameraData.camera,
@@ -89,7 +87,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 				// GetEstmatedMipMapLevel calculates the mipmap starting from 0
 				estimatedShadinDensityExponent =
 					AtlasSizeExponent - Mathf.Max(estimatedShadinDensityExponent, 0);
-				//estimatedMipmap = Mathf.Clamp(estimatedMipmap, MinResolution, MaxResolution);
 				if (estimatedShadinDensityExponent < MinResolution ||
 				    estimatedShadinDensityExponent > MaxResolution) {
 					continue;
@@ -222,7 +219,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		}
 		
 		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
-
 			CommandBuffer cmd = CommandBufferPool.Get("Texel-Shading Pass Post");
 			context.ExecuteCommandBuffer(cmd);
 			CommandBufferPool.Release(cmd);
@@ -235,6 +231,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		
 			context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filterSettings);
 		}
+		
 	}
 
 	// Fallback-Forward pass

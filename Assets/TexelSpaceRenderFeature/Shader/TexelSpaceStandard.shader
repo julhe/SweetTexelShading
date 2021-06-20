@@ -77,23 +77,14 @@ Shader "TexelShading/Standard"
 		LOD 100
 		HLSLINCLUDE
 
-		#include "TexelShading.cginc"
 		#include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
 		#include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
 		#pragma enable_d3d11_debug_symbols
 
-		#define TSS_VISIBLITY_BY_CPU
-		StructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasProperties;
-		StructuredBuffer<ObjectToAtlasProperties> g_prev_ObjectToAtlasProperties;
-		RWStructuredBuffer<ObjectToAtlasProperties> g_ObjectToAtlasPropertiesRW;
-		uint _ObjectID_b, _prev_ObjectID_b; 
-	
-		float g_AtlasResolutionScale;
-		sampler2D g_prev_VistaAtlas, g_VistaAtlas;
-		float4 g_VistaAtlas_ST;
+		sampler2D g_VistaAtlas;
+		
 		float _Tss_DebugView;
-
 		float4 _VistaAtlasScaleOffset;
 		float4 GetObjectAtlasScaleOffset()
 		{
@@ -101,65 +92,6 @@ Shader "TexelShading/Standard"
 			// return g_ObjectToAtlasProperties[_ObjectID_b].atlas_ST;
 		}
 		ENDHLSL
-		Pass
-		{
-			Tags{ "LightMode" = "Visibility Pass" }
-			HLSLPROGRAM
-			#pragma vertex vert
-			#pragma fragment frag
-			#pragma target 5.0
-
-			//--------------------------------------
-            // GPU Instancing
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ DOTS_INSTANCING_ON
-
-			struct v2f
-			{
-				float4 positionCS : SV_POSITION;
-				float3 positionWS : COLOR;
-				float2 uv : TEXCOORD0;
-				UNITY_VERTEX_INPUT_INSTANCE_ID
-				UNITY_VERTEX_OUTPUT_STEREO
-			};
-
-			v2f vert(Attributes input)
-			{
-				v2f output = (v2f)0;
-			    UNITY_SETUP_INSTANCE_ID(input);
-			    UNITY_TRANSFER_INSTANCE_ID(input, output);
-			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-
-				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-				output.uv = input.lightmapUV;
-				output.positionCS = vertexInput.positionCS;
-				output.positionWS = vertexInput.positionWS;
-
-				return output;
-			}
-			
-			
-			uint4 frag(v2f i, uint primID : SV_PrimitiveID) : SV_Target
-			{
-				UNITY_SETUP_INSTANCE_ID(i);
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-				float2 dx = ddx(i.uv * g_AtlasResolutionScale);
-				float2 dy = ddy(i.uv * g_AtlasResolutionScale);
-
-				// classic mipmap-level calculation
-				float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
-				rawMipMapLevel = min(log2(rawMipMapLevel) * 1, g_AtlasSizeExponent);
-
-				uint clusterID = floor(i.uv.x * 8 * 8 + i.uv.y * 8);
-				uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
-
-				// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
-				// note: it's still possible that a part with a high mipmap level is occluded later! 
-				// InterlockedMax(g_ObjectToAtlasPropertiesRW[_ObjectID_b].sizeExponent, mipMapLevel);
-				return EncodeVisibilityBuffer(_ObjectID_b, primID, mipMapLevel);
-			}
-			ENDHLSL
-		}
 
 		Pass
 			{
@@ -179,8 +111,6 @@ Shader "TexelShading/Standard"
 			struct v2f
 			{
 				float2 uv : TEXCOORD0;
-				float2 uvPrev : TEXCOORD1;
-				float2 uvRaw : TEXCOORD2;
 				float4 positionCS : SV_POSITION;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
@@ -196,13 +126,9 @@ Shader "TexelShading/Standard"
 				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
 				
 				output.positionCS = vertexInput.positionCS;
-				output.uvRaw = input.lightmapUV;
-
 
 				const float4 atlasScaleOffset = GetObjectAtlasScaleOffset(); 
 				output.uv = input.lightmapUV * atlasScaleOffset.xy + atlasScaleOffset.zw;
-				const float4 prev_atlasScaleOffset = g_prev_ObjectToAtlasProperties[_prev_ObjectID_b].atlas_ST;
-				output.uvPrev = (input.lightmapUV * prev_atlasScaleOffset.xy) + prev_atlasScaleOffset.zw;
 
 				return output;
 			}
@@ -214,41 +140,22 @@ Shader "TexelShading/Standard"
 				UNITY_SETUP_INSTANCE_ID(i);
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 				half4 atlas = tex2D(g_VistaAtlas, i.uv);		
-				atlas.rgb /= atlas.a;
+				atlas.rgb /= max(0.0001, atlas.a);
 
-				#ifndef TSS_VISIBLITY_BY_CPU
-					float4 finalColor = lerp(atlasA, atlasB, g_atlasMorph);
-					
-					// compute maximal lod level per object on-the-fly, which is very slow, but works so far.
-					// note: it's still possible that a part with a high mipmap level is occluded later!
-
-					float2 dx = ddx(i.uvRaw * g_AtlasResolutionScale);
-					float2 dy = ddy(i.uvRaw * g_AtlasResolutionScale);
-
-					// classic mipmap-level calculation
-					float rawMipMapLevel = max(max(dot(dx, dx), dot(dy, dy)), 1);
-					rawMipMapLevel = min(log2(rawMipMapLevel), g_AtlasSizeExponent);
-					uint mipMapLevel = floor(g_AtlasSizeExponent - rawMipMapLevel);
-					InterlockedMax(g_ObjectToAtlasPropertiesRW[_ObjectID_b].sizeExponent, mipMapLevel);
-					g_ObjectToAtlasPropertiesRW[_ObjectID_b].atlas_ST = 0;
-				#endif
-				//finalColor.rgb = TonemappingACES(finalColor.rgb);
-
+				
 				return lerp(atlas , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView);
 			}
 			ENDHLSL
 		}
-
+		
+		// A copy of the "Universal Render Pipeline/Lit" but with a custom vertex shader to map into atlas-space
+		// Shading pass
+		// Reuses the URP Code path to render to the atlas.
+		// Right now, it only does adjust the output vertex coordinates from the vertex shader.
 		Pass
 		{
-			// A copy of the "Universal Render Pipeline/Lit" but with a custom vertex shader to map into atlas-space
-			// Shading pass
-			// Reuses the URP Code path to render to the atlas.
-			// Right now, it only does adjust the output vertex coordinates from the vertex shader.
-			
 			Tags{"LightMode" = "Texel Space Pass"}
-			
-			//Blend[_SrcBlend][_DstBlend]
+
 			Blend Off
             ZWrite Off
 			ZTest Off
@@ -297,7 +204,7 @@ Shader "TexelShading/Standard"
             #pragma multi_compile _ DOTS_INSTANCING_ON
 
             #pragma vertex TsLitPassVertex
-            #pragma fragment frag
+           // #pragma fragment frag
             #pragma fragment LitPassFragment
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
@@ -322,8 +229,8 @@ Shader "TexelShading/Standard"
 
 				// cull back facing geometry with a dirty trick...
 				if(dot(output.normalWS, output.viewDirWS) < 0.0) {
+						//TODO: verify behaviour on Quest.
 					output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be renderd
-					//TODO: verify behaviour on Quest.
 				}
 
 				return output;
@@ -334,16 +241,17 @@ Shader "TexelShading/Standard"
 				UNITY_SETUP_INSTANCE_ID(i);
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 				half4 lit = LitPassFragment(i);
-				return lerp(lit , half4(1.0, 1.0, 1.0, 1.0), _Tss_DebugView);
+				return lit;
 			}
 
 			ENDHLSL
 		}
 		
+		// A copy of the "Universal Render Pipeline/Lit" but with a different LightMode to make it controllable
+		// can't make a shader variant of "Texel Space Pass", 
+		// because "Cull" needs to be off for the texel-space pass, but its not possible to override this from the Scriptable Render Pass
 		Pass {
-			// A copy of the "Universal Render Pipeline/Lit" but with a different LightMode to make it controllable
-			// can't make a shader variant of "Texel Space Pass", 
-			// because "Cull" needs to be off for the texel-space pass, but its not possible to override this from the Scriptable Render Pass
+
 			Tags{"LightMode" = "Forward Fallback"}
 
 			Blend[_SrcBlend][_DstBlend]
