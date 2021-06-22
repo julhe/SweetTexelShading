@@ -70,6 +70,8 @@ Shader "TexelShading/Standard"
         [HideInInspector][NoScaleOffset]unity_Lightmaps("unity_Lightmaps", 2DArray) = "" {}
         [HideInInspector][NoScaleOffset]unity_LightmapsInd("unity_LightmapsInd", 2DArray) = "" {}
         [HideInInspector][NoScaleOffset]unity_ShadowMasks("unity_ShadowMasks", 2DArray) = "" {}
+    	
+    	[HideInInspector] _VistaAtlasScaleOffset("_VistaAtlasScaleOffset", Vector) = (0,0,0,0)
     }
 	SubShader
 	{
@@ -162,7 +164,7 @@ Shader "TexelShading/Standard"
             Cull Off
 
             HLSLPROGRAM
-            #pragma exclude_renderers gles gles3 glcore
+           // #pragma exclude_renderers gles gles3 glcore
             #pragma target 4.5
 
             // -------------------------------------
@@ -230,7 +232,7 @@ Shader "TexelShading/Standard"
 				// cull back facing geometry with a dirty trick...
 				if(dot(output.normalWS, output.viewDirWS) < 0.0) {
 						//TODO: verify behaviour on Quest.
-					output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be renderd
+				//	output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be renderd
 				}
 
 				return output;
@@ -250,6 +252,7 @@ Shader "TexelShading/Standard"
 		// A copy of the "Universal Render Pipeline/Lit" but with a different LightMode to make it controllable
 		// can't make a shader variant of "Texel Space Pass", 
 		// because "Cull" needs to be off for the texel-space pass, but its not possible to override this from the Scriptable Render Pass
+		// TODO: RenderStateBlock exists and fixes this issue!
 		Pass {
 
 			Tags{"LightMode" = "Forward Fallback"}
@@ -259,7 +262,7 @@ Shader "TexelShading/Standard"
             Cull[_Cull]
 
             HLSLPROGRAM
-            #pragma exclude_renderers gles gles3 glcore
+            //#pragma exclude_renderers gles gles3 glcore
             #pragma target 4.5
 
             // -------------------------------------

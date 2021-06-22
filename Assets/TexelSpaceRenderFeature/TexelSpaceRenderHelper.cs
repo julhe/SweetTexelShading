@@ -17,6 +17,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     MaterialPropertyBlock matProbBlock;
     [Header("Debug - CPU Heuristic")] public int DesiredShadingDensityExponent;
     public int TimeSliceIndex;
+    public uint LayerMaskInMeshRenderer;
     public float MeshUVDistributionMetric;
     public TexelSpaceObjectState TexelSpaceObjectState;
     
@@ -62,12 +63,21 @@ public class TexelSpaceRenderHelper : MonoBehaviour
 
     }
 
+    public bool IsVisible;
+    void OnBecameVisible() {
+        IsVisible = true;
+    }
+
+    void OnBecameInvisible() {
+        IsVisible = false;
+    }
+
     public int GetEstimatedMipMapLevel(Camera camera, int texelCount) {
         SetView(camera);
         return CalculateMipmapLevel(GetComponent<Renderer>().bounds, MeshUVDistributionMetric, texelCount);
     }
     
-    public void SetAtlasProperties(int newObjectID) {
+    public void SetAtlasProperties(int newObjectID, uint renderingLayerMask) {
         previousID = objectID;
         objectID = newObjectID;
 
@@ -75,18 +85,11 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         matProbBlock.SetInt(PrevObjectIDB, newObjectID);
         if (meshRenderer != null) {
             meshRenderer.SetPropertyBlock(matProbBlock);
+            meshRenderer.renderingLayerMask = renderingLayerMask;
+            LayerMaskInMeshRenderer = meshRenderer.renderingLayerMask;
         }
     }
 
-    public void SetTexelSpaceObjectState(TexelSpaceObjectState texelSpaceObjectState) {
-        if (meshRenderer == null) {
-            return;
-        }
-
-        TexelSpaceObjectState = texelSpaceObjectState;
-        meshRenderer.renderingLayerMask = texelSpaceObjectState.ToRenderingLayerMask();
-    }
-    
     // =================================================================================================================
     private Vector3 m_CameraPosition;
     private float m_CameraEyeToScreenDistanceSquared;
@@ -117,7 +120,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
         // mip = 0.5 * log2 (uvArea / screenArea)
         float distanceToCameraSqr = bounds.SqrDistance(m_CameraPosition);
         if (distanceToCameraSqr < 1e-06)
-            return 0;
+            return -1;
 
         // uvDistributionMetric is the average of triangle area / uv area (a ratio from world space triangle area to normalised uv area)
         // - triangle area is in world space
@@ -141,6 +144,7 @@ public class TexelSpaceRenderHelper : MonoBehaviour
     }
 
     public void SetAtlasScaleOffset(Vector4 scaleOffset) {
+        Debug.Assert(scaleOffset != Vector4.zero);
         matProbBlock.SetVector("_VistaAtlasScaleOffset", scaleOffset);
         if (meshRenderer != null)
         {
