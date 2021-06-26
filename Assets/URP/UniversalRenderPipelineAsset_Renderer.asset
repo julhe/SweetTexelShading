@@ -53,14 +53,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   AtlasSizeExponent: 11
-  AtlasTimeSlicing: 5
+  AtlasTimeSlicing: 10
   MinResolution: 7
   MaxResolution: 10
   OverrideTimeSliceIndex: -1
   DebugViewOverlay: 0
   ClearAtlasWithRed: 0
   AlwaysClearAtlas: 0
-  DontAssingLayers: 0
+  Pause: 0
+  CurrentTimeSliceIndex: 5
+  InAtlasRenderedLayerMask: 30
+  ToBeRenderedThisFrameMask: 32
+  FallbackRenderLayerMask: -63
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

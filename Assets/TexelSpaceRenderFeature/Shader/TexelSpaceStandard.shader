@@ -232,7 +232,7 @@ Shader "TexelShading/Standard"
 				// cull back facing geometry with a dirty trick...
 				if(dot(output.normalWS, output.viewDirWS) < 0.0) {
 						//TODO: verify behaviour on Quest.
-				//	output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be renderd
+					//output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be renderd
 				}
 
 				return output;

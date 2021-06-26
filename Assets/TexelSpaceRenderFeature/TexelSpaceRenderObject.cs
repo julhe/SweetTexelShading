@@ -17,14 +17,15 @@ public class TexelSpaceRenderObject : MonoBehaviour
     MaterialPropertyBlock matProbBlock;
     [Header("Debug - CPU Heuristic")] public int DesiredShadingDensityExponent;
     public int TimeSliceIndex;
+    [BitMaskProperty]
     public uint LayerMaskInMeshRenderer;
     public float MeshUVDistributionMetric;
-    public TexelSpaceObjectState TexelSpaceObjectState;
-    
+
     public void OnEnable()
     {
         matProbBlock = new MaterialPropertyBlock();
         Mesh mesh = GetComponent<MeshFilter>().sharedMesh;
+        Debug.Assert(mesh);
         MeshUVDistributionMetric = mesh.GetUVDistributionMetric(1);
 
         // If the mesh has a transform scale or uvscale it would need to be applied here
@@ -72,7 +73,7 @@ public class TexelSpaceRenderObject : MonoBehaviour
         IsVisible = false;
     }
 
-    public int GetEstimatedMipMapLevel(Camera camera, int texelCount) {
+    public float GetEstimatedMipMapLevel(Camera camera, int texelCount) {
         SetView(camera);
         return CalculateMipmapLevel(GetComponent<Renderer>().bounds, MeshUVDistributionMetric, texelCount);
     }
@@ -114,7 +115,7 @@ public class TexelSpaceRenderObject : MonoBehaviour
     }
 
     
-    private int CalculateMipmapLevel(Bounds bounds, float uvDistributionMetric, float texelCount) {
+    private float CalculateMipmapLevel(Bounds bounds, float uvDistributionMetric, float texelCount) {
         // based on  http://web.cse.ohio-state.edu/~crawfis.3/cse781/Readings/MipMapLevels-Blog.html
         // screenArea = worldArea * (ScreenPixels/(D*tan(FOV)))^2
         // mip = 0.5 * log2 (uvArea / screenArea)
@@ -131,7 +132,7 @@ public class TexelSpaceRenderObject : MonoBehaviour
         float v = (texelCount * distanceToCameraSqr) / (uvDistributionMetric * m_CameraEyeToScreenDistanceSquared);
         float desiredMipLevel = 0.5f * Mathf.Log(v, 2);
 
-        return (int)desiredMipLevel;
+        return desiredMipLevel;
     }
 
     // Pick the larger two scales of the 3 components and multiply together

@@ -11,10 +11,12 @@ using Random = UnityEngine.Random;
 public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	//NOTES: -Changing the RenderingLayerMask from the RenderFeature doesn't work. Probably because object culling happened before.
 	//		 -It also seems not to be possible to run a new culling inside the pass.
+	//		 - Potential Bug: Object Foo gets placed into atlas -> get's out of view -> doesn't get rendered when it frame index is rendering -> comes back into view -> is black.
 	
 	[Range(8, 13)] public int AtlasSizeExponent = 10;
+	[Range(-2f, 2f)] public float ShadingExponentBias = 0f;
 	[Range(1, 32)] public uint AtlasTimeSlicing;
-	[Range(1, 10)] public int MinResolution = 2, MaxResolution = 12;
+	int MaxResolution => AtlasSizeAxis - 1;
 	
 	[Header("Debug"), Range(-1, 10)]
 	public int OverrideTimeSliceIndex = -1;
@@ -35,7 +37,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	PresentPass presentPass;
 	RenderTexture vistaAtlas;
 	int AtlasSizeAxis => 1 << AtlasSizeExponent;
-	const uint NotInAtlasRenderMask = 1 << 0;
+	const uint NotInAtlasRenderMask = 1 << 30;
 
 	public override void Create() {
 		
@@ -69,13 +71,13 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		}
 
 		uint timeSlicedFrameIndex = renderedFrames % Math.Max(AtlasTimeSlicing, 1);
-		CurrentTimeSliceIndex = timeSlicedFrameIndex;
+		
 	#if UNITY_EDITOR
 		if (OverrideTimeSliceIndex != -1) {
 			timeSlicedFrameIndex = (uint) OverrideTimeSliceIndex;
 		}
 	#endif
-		
+		CurrentTimeSliceIndex = timeSlicedFrameIndex;
 		bool shouldGenerateNewAtlas = timeSlicedFrameIndex == 0;
 		texelSpaceShadingPass.ShouldClearAltas = true;
 		if (shouldGenerateNewAtlas) {
@@ -84,27 +86,27 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			objectsInCurrentAtlas.Clear();
 			int atlasTexelSize = AtlasSizeAxis * AtlasSizeAxis;
 
-			int atlasTilesTotal = AtlasSizeAxis / (int) ATLAS_TILE_SIZE;
+			int atlasTilesTotal = AtlasSizeAxis / (int) AtlasTileSize;
 			atlasTilesTotal *= atlasTilesTotal;
 			int atlasTilesOccupied = 0;
 
 			
 			for (int i = 0; i < visibleObjects.Count; i++) {
-				int estimatedShadinDensityExponentInv = visibleObjects[i].GetEstimatedMipMapLevel(
+				float estimatedShadinDensityExponentInv = visibleObjects[i].GetEstimatedMipMapLevel(
 					renderingData.cameraData.camera,
 					atlasTexelSize);
 
 				bool addToAtlas = estimatedShadinDensityExponentInv >= 0;
 
 				// GetEstmatedMipMapLevel calculates the mipmap starting from 0
-				int estimatedShadinDensityExponent =
-					AtlasSizeExponent - estimatedShadinDensityExponentInv;
-				if (estimatedShadinDensityExponent < MinResolution ||
-				    estimatedShadinDensityExponent > MaxResolution) {
+				int estimatedShadingDensityExponent = Mathf.RoundToInt(ShadingExponentBias + (AtlasSizeExponent - estimatedShadinDensityExponentInv));
+				
+				if (estimatedShadingDensityExponent < MinAtlasObjectSizeExponent ||
+				    estimatedShadingDensityExponent > MaxResolution) {
 					addToAtlas = false;
 				}
 
-				int objectTilesPerAxis = (1 << estimatedShadinDensityExponent) / (int) ATLAS_TILE_SIZE;
+				int objectTilesPerAxis = (1 << estimatedShadingDensityExponent) / (int) AtlasTileSize;
 				int objectTilesTotal = objectTilesPerAxis * objectTilesPerAxis;
 				if (atlasTilesOccupied + objectTilesTotal > atlasTilesTotal) {
 					// if the atlas is full, don't add any more objects
@@ -114,7 +116,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 					atlasTilesOccupied += objectTilesTotal;
 				}
 
-				visibleObjects[i].DesiredShadingDensityExponent = estimatedShadinDensityExponent;
+				visibleObjects[i].DesiredShadingDensityExponent = estimatedShadingDensityExponent;
 				if (addToAtlas) {
 					objectsInCurrentAtlas.Add(visibleObjects[i]);
 				}
@@ -133,21 +135,27 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			for (int i = 0; i < objectsInCurrentAtlas.Count; i++) {
 				TexelSpaceRenderObject objectInAtlas = objectsInCurrentAtlas[i];
 				int occupiedTilesPerAxis =
-					(1 << objectInAtlas.DesiredShadingDensityExponent) / (int) ATLAS_TILE_SIZE;
+					(1 << objectInAtlas.DesiredShadingDensityExponent) / (int) AtlasTileSize;
 				int occupiedTilesTotal = occupiedTilesPerAxis * occupiedTilesPerAxis;
 				Vector4 atlasRect = GetTextureRect((uint) atlasCursor, (uint) occupiedTilesPerAxis);
+				bool isValidRect = atlasRect.x < atlasRect.z && atlasRect.y < atlasRect.w;
+				
+				if (!isValidRect) {
+					Debug.LogError("Malformed atlas rect.");
+				}
 				Vector4 textureRectInAtlas = GetUVToAtlasScaleOffset(atlasRect) / AtlasSizeAxis;
 
 				atlasCursor += occupiedTilesTotal;
+				//Debug.Assert(textureRectInAtlas.x * textureRectInAtlas.y > 0, "Allocating a object in the atlas with zero space");
+		
 				objectInAtlas.SetAtlasScaleOffset(textureRectInAtlas);
 
 				// generate a layermask to distribute the gpu-workload among multiple frames
 				//TODO: take the shading density into account to balance the gpu load between time slices
 				// use AtlasTimeSlcing - 1, because the frameIndex can never reach AtlatTimeSlicing due to Modulo Operator
 				int maxLayerMask = Math.Max((int) AtlasTimeSlicing - 1, 0);
-				
-				// we start at 1 because: 0 == Not-In-Atlas,
-				objectInAtlas.TimeSliceIndex = Random.Range(1, maxLayerMask + 1); 
+
+				objectInAtlas.TimeSliceIndex = Random.Range(0, maxLayerMask); 
 				objectInAtlas.SetAtlasProperties(i, (uint) 1 << objectInAtlas.TimeSliceIndex);
 			}
 
@@ -170,19 +178,13 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			texelSpaceShadingPass.TargetAtlas = vistaAtlas;
 			
 			InAtlasRenderedLayerMask = 0;
-			//
-			for (int i = 1; i < timeSlicedFrameIndex; i++) {
+			
+			
+			for (int i = 0; i < timeSlicedFrameIndex - 1; i++) {
 				InAtlasRenderedLayerMask |= (1 << i);
 			}
 			
-			ToBeRenderedThisFrameMask = 1 << (int) timeSlicedFrameIndex;
-			
-			uint notYetRenderedMask = 0;
-			for (int i = (int) timeSlicedFrameIndex + 1; i <= 31; i++) {
-				notYetRenderedMask |= (uint) (1 << i);
-			}
-
-			
+			ToBeRenderedThisFrameMask = 1 << (int) (timeSlicedFrameIndex - 1); // a frame index of 0 == initialisation phase (see NOTE above)
 			presentPass.FromAtlasRenderLayerMask =
 				unchecked((uint) (InAtlasRenderedLayerMask | ToBeRenderedThisFrameMask));
 			
@@ -246,6 +248,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			// render the objects into the atlas
 			DrawingSettings drawingSettings =
 				CreateDrawingSettings(lightModeTexelSpacePass, ref renderingData, SortingCriteria.None);
+			drawingSettings.perObjectData = PerObjectData.ReflectionProbes | PerObjectData.Lightmaps | PerObjectData.LightProbe | PerObjectData.LightData | PerObjectData.OcclusionProbe | PerObjectData.ShadowMask;
 
 			FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all) {
 				renderingLayerMask = RenderLayerMask
@@ -332,7 +335,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 #region CPUAtlasPacking
 
-	const uint ATLAS_TILE_SIZE = 128;
+	const int MinAtlasObjectSizeExponent = 6;
+	const uint AtlasTileSize = 1 << MinAtlasObjectSizeExponent;
 
 	uint2 GetTilePosition(uint index) {
 		return new uint2(DecodeMorton2X(index), DecodeMorton2Y(index));
@@ -340,8 +344,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 	float4 GetTextureRect(uint index, uint tilesPerAxis) {
 		float2 atlasPosition_tileSpace = GetTilePosition(index);
-		float2 min = atlasPosition_tileSpace * ATLAS_TILE_SIZE;
-		float2 max = min + tilesPerAxis * ATLAS_TILE_SIZE;
+		float2 min = atlasPosition_tileSpace * AtlasTileSize;
+		float2 max = min + tilesPerAxis * AtlasTileSize;
 
 		return new float4(min, max);
 	}
@@ -383,13 +387,13 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	static void RenderTextureCreateOrChange(ref RenderTexture rt, int sizeExponent) {
 		int sizeXy = 1 << sizeExponent;
 
-		bool needsCreation = rt == null;
+		bool needsInitialisation = rt == null;
 		if (rt != null && rt.width != sizeXy) {
 			rt.Release();
-			needsCreation = true;
+			needsInitialisation = true;
 		}
 
-		if (!needsCreation) {
+		if (!needsInitialisation) {
 			return;
 		}
 
@@ -403,24 +407,5 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			hideFlags = HideFlags.DontSave
 		};
 		rt.Create();
-	}
-}
-
-public enum TexelSpaceObjectState {
-	NotInAtlas,
-	InAtlasNotYetRendered,
-	InAtlasRenderingThisFrame,
-	InAtlasIsRendered
-}
-
-public static class StaticUtilities {
-	public static uint ToRenderingLayerMask(this TexelSpaceObjectState texelSpaceObjectState) {
-		return texelSpaceObjectState switch {
-			TexelSpaceObjectState.NotInAtlas => 1 << 0,
-			TexelSpaceObjectState.InAtlasNotYetRendered => 1 << 1,
-			TexelSpaceObjectState.InAtlasRenderingThisFrame => 1 << 2,
-			TexelSpaceObjectState.InAtlasIsRendered => 1 << 3,
-			_ => throw new ArgumentOutOfRangeException(nameof(texelSpaceObjectState), texelSpaceObjectState, null)
-		};
 	}
 }
