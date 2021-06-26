@@ -7,7 +7,7 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using Random = UnityEngine.Random;
-
+//TODO: use [DisallowMultipleRendererFeature], but its currently internal -> bug report to unity!
 public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	//NOTES: -Changing the RenderingLayerMask from the RenderFeature doesn't work. Probably because object culling happened before.
 	//		 -It also seems not to be possible to run a new culling inside the pass.
@@ -25,7 +25,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	[Header("Debug Out")] 
 	public uint CurrentTimeSliceIndex;
 
-	public uint AlreadyRenderedLayerMask, InAtlasMask, ToBeRenderedThisFrameMask, FallbackRenderLayerMask;
+	[BitMaskPropertyAttribute]
+	public int AlreadyRenderedLayerMask, InAtlasMask, ToBeRenderedThisFrameMask, FallbackRenderLayerMask;
 
 	List<TexelSpaceRenderHelper> objectsInCurrentAtlas = new List<TexelSpaceRenderHelper>();
 
@@ -36,10 +37,12 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	RenderTexture vistaAtlas;
 	int AtlasSizeAxis => 1 << AtlasSizeExponent;
 	const uint NotInAtlasRenderMask = 1 << 0;
+
 	public override void Create() {
+		
+		Debug.Assert(instance == null, $"A instance of the {nameof(TexelSpaceRenderFeature)} is already active. There should be only one {nameof(TexelSpaceRenderFeature)} per project.");
 		instance = this;
 		
-
 		texelSpaceShadingPass = new TexelSpaceShadingPass {
 			renderPassEvent = RenderPassEvent.BeforeRenderingOpaques,
 			Parent = this,
@@ -158,31 +161,34 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			presentPass.FromAtlasRenderLayerMask = 0;
 			texelSpaceShadingPass.RenderLayerMask = 0;
 
-			FallbackRenderLayerMask = presentPass.FallbackRenderLayerMask;
+			FallbackRenderLayerMask = unchecked((int) presentPass.FallbackRenderLayerMask);
 			ToBeRenderedThisFrameMask = 0;
 			AlreadyRenderedLayerMask = 0;
+			
 		}
 		else {
 			texelSpaceShadingPass.ShouldClearAltas = false;
 			texelSpaceShadingPass.TargetAtlas = vistaAtlas;
 			AlreadyRenderedLayerMask = 0;
 			for (int i = 1; i < timeSlicedFrameIndex; i++) {
-				AlreadyRenderedLayerMask |= (uint) (1 << i);
+				AlreadyRenderedLayerMask |= (1 << i);
 			}
 			
-			ToBeRenderedThisFrameMask = (uint) (1 << (int) timeSlicedFrameIndex);
+			ToBeRenderedThisFrameMask = 1 << (int) timeSlicedFrameIndex;
 			
 			uint notYetRenderedMask = 0;
 			for (int i = (int) timeSlicedFrameIndex + 1; i <= 31; i++) {
 				notYetRenderedMask |= (uint) (1 << i);
 			}
 
-			presentPass.FromAtlasRenderLayerMask = AlreadyRenderedLayerMask | ToBeRenderedThisFrameMask;
-			FallbackRenderLayerMask = ~presentPass.FromAtlasRenderLayerMask;
-			presentPass.FallbackRenderLayerMask = FallbackRenderLayerMask;
 			
-			texelSpaceShadingPass.RenderLayerMask = ToBeRenderedThisFrameMask;
+			presentPass.FromAtlasRenderLayerMask =
+				unchecked((uint) (AlreadyRenderedLayerMask | ToBeRenderedThisFrameMask));
 			
+			FallbackRenderLayerMask = unchecked((int)  ~presentPass.FromAtlasRenderLayerMask);
+			presentPass.FallbackRenderLayerMask =  unchecked((uint) FallbackRenderLayerMask);
+
+			texelSpaceShadingPass.RenderLayerMask = unchecked((uint) ToBeRenderedThisFrameMask);
 		}
 
 		// Enqueue Passes
@@ -290,14 +296,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		}
 		
 	}
-	
 
-	protected override void Dispose(bool disposing) {
-		base.Dispose(disposing);
-		if (vistaAtlas) {
-			vistaAtlas.Release();
-		}
-	}
+
 
 
 #region Configuration
