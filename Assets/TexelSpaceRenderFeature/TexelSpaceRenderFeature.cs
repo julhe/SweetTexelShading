@@ -21,11 +21,15 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	[Range(0,1)] public float DebugViewOverlay = 0f;
 	public bool ClearAtlasWithRed;
 	public bool AlwaysClearAtlas;
-	public bool DontAssingLayers;
+	public bool Pause;
+	[Header("Debug Out")] 
+	public uint CurrentTimeSliceIndex;
+
+	public uint AlreadyRenderedLayerMask, InAtlasMask, ToBeRenderedThisFrameMask, FallbackRenderLayerMask;
 
 	List<TexelSpaceRenderHelper> objectsInCurrentAtlas = new List<TexelSpaceRenderHelper>();
 
-	byte renderedFrames;
+	uint renderedFrames;
 	
 	TexelSpaceShadingPass texelSpaceShadingPass;
 	PresentPass presentPass;
@@ -49,16 +53,21 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		RenderTextureCreateOrChange(ref vistaAtlas, AtlasSizeExponent);
 	}
 
+	int lastRenderedFrameByUnity = -1;
+	uint lastRenderedFrameByCounter = 0;
 	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) {
 
 		RenderTextureCreateOrChange(ref vistaAtlas, AtlasSizeExponent);
-		
-		unchecked {
-			renderedFrames++;
+
+		lastRenderedFrameByUnity = Time.renderedFrameCount;
+		if (!Pause) {
+			unchecked {
+				renderedFrames++;
+			}
 		}
 
 		uint timeSlicedFrameIndex = renderedFrames % Math.Max(AtlasTimeSlicing, 1);
-
+		CurrentTimeSliceIndex = timeSlicedFrameIndex;
 	#if UNITY_EDITOR
 		if (OverrideTimeSliceIndex != -1) {
 			timeSlicedFrameIndex = (uint) OverrideTimeSliceIndex;
@@ -145,29 +154,35 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			// (It doesn't seem to be possible to run the culling a second time)
 			
 			// TODO: clear the atlas after the present pass
-			presentPass.FallbackRenderLayerMask = UInt32.MaxValue;
+			presentPass.FallbackRenderLayerMask = uint.MaxValue;
 			presentPass.FromAtlasRenderLayerMask = 0;
 			texelSpaceShadingPass.RenderLayerMask = 0;
+
+			FallbackRenderLayerMask = presentPass.FallbackRenderLayerMask;
+			ToBeRenderedThisFrameMask = 0;
+			AlreadyRenderedLayerMask = 0;
 		}
 		else {
 			texelSpaceShadingPass.ShouldClearAltas = false;
 			texelSpaceShadingPass.TargetAtlas = vistaAtlas;
-			uint alreadyRenderedLayerMask = 0;
+			AlreadyRenderedLayerMask = 0;
 			for (int i = 1; i < timeSlicedFrameIndex; i++) {
-				alreadyRenderedLayerMask |= (uint) (1 << i);
+				AlreadyRenderedLayerMask |= (uint) (1 << i);
 			}
 			
-			uint toBeRenderedThisFrameMask = (uint) (1 << (int) timeSlicedFrameIndex);
+			ToBeRenderedThisFrameMask = (uint) (1 << (int) timeSlicedFrameIndex);
 			
 			uint notYetRenderedMask = 0;
 			for (int i = (int) timeSlicedFrameIndex + 1; i <= 31; i++) {
 				notYetRenderedMask |= (uint) (1 << i);
 			}
 
-			presentPass.FromAtlasRenderLayerMask = alreadyRenderedLayerMask | toBeRenderedThisFrameMask;
-			presentPass.FallbackRenderLayerMask = ~presentPass.FromAtlasRenderLayerMask;
+			presentPass.FromAtlasRenderLayerMask = AlreadyRenderedLayerMask | ToBeRenderedThisFrameMask;
+			FallbackRenderLayerMask = ~presentPass.FromAtlasRenderLayerMask;
+			presentPass.FallbackRenderLayerMask = FallbackRenderLayerMask;
 			
-			texelSpaceShadingPass.RenderLayerMask = toBeRenderedThisFrameMask;
+			texelSpaceShadingPass.RenderLayerMask = ToBeRenderedThisFrameMask;
+			
 		}
 
 		// Enqueue Passes
