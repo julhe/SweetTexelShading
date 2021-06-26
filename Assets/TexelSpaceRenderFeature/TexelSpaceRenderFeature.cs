@@ -22,13 +22,12 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	public bool ClearAtlasWithRed;
 	public bool AlwaysClearAtlas;
 	public bool Pause;
-	[Header("Debug Out")] 
+	[Header("Debug Outputs")] 
 	public uint CurrentTimeSliceIndex;
-
 	[BitMaskPropertyAttribute]
-	public int AlreadyRenderedLayerMask, InAtlasMask, ToBeRenderedThisFrameMask, FallbackRenderLayerMask;
+	public int InAtlasRenderedLayerMask, ToBeRenderedThisFrameMask, FallbackRenderLayerMask;
 
-	List<TexelSpaceRenderHelper> objectsInCurrentAtlas = new List<TexelSpaceRenderHelper>();
+	List<TexelSpaceRenderObject> objectsInCurrentAtlas = new List<TexelSpaceRenderObject>();
 
 	uint renderedFrames;
 	
@@ -40,19 +39,19 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 	public override void Create() {
 		
-		Debug.Assert(instance == null, $"A instance of the {nameof(TexelSpaceRenderFeature)} is already active. There should be only one {nameof(TexelSpaceRenderFeature)} per project.");
+		Debug.Assert(instance == null || instance == this, $"A instance of the {nameof(TexelSpaceRenderFeature)} is already active. There should be only one {nameof(TexelSpaceRenderFeature)} per project.");
 		instance = this;
 		
-		texelSpaceShadingPass = new TexelSpaceShadingPass {
+		texelSpaceShadingPass ??= new TexelSpaceShadingPass {
 			renderPassEvent = RenderPassEvent.BeforeRenderingOpaques,
 			Parent = this,
 		};
 
-		presentPass = new PresentPass {
+		presentPass ??= new PresentPass {
 			Parent = this,
 			renderPassEvent = RenderPassEvent.AfterRenderingOpaques
 		};
-		
+
 		RenderTextureCreateOrChange(ref vistaAtlas, AtlasSizeExponent);
 	}
 
@@ -132,7 +131,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			// =============================================================================================================
 			int atlasCursor = 0; //the current place where we are inserting into the atlas
 			for (int i = 0; i < objectsInCurrentAtlas.Count; i++) {
-				TexelSpaceRenderHelper objectInAtlas = objectsInCurrentAtlas[i];
+				TexelSpaceRenderObject objectInAtlas = objectsInCurrentAtlas[i];
 				int occupiedTilesPerAxis =
 					(1 << objectInAtlas.DesiredShadingDensityExponent) / (int) ATLAS_TILE_SIZE;
 				int occupiedTilesTotal = occupiedTilesPerAxis * occupiedTilesPerAxis;
@@ -163,15 +162,17 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 			FallbackRenderLayerMask = unchecked((int) presentPass.FallbackRenderLayerMask);
 			ToBeRenderedThisFrameMask = 0;
-			AlreadyRenderedLayerMask = 0;
+			InAtlasRenderedLayerMask = 0;
 			
 		}
 		else {
 			texelSpaceShadingPass.ShouldClearAltas = false;
 			texelSpaceShadingPass.TargetAtlas = vistaAtlas;
-			AlreadyRenderedLayerMask = 0;
+			
+			InAtlasRenderedLayerMask = 0;
+			//
 			for (int i = 1; i < timeSlicedFrameIndex; i++) {
-				AlreadyRenderedLayerMask |= (1 << i);
+				InAtlasRenderedLayerMask |= (1 << i);
 			}
 			
 			ToBeRenderedThisFrameMask = 1 << (int) timeSlicedFrameIndex;
@@ -183,7 +184,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 			
 			presentPass.FromAtlasRenderLayerMask =
-				unchecked((uint) (AlreadyRenderedLayerMask | ToBeRenderedThisFrameMask));
+				unchecked((uint) (InAtlasRenderedLayerMask | ToBeRenderedThisFrameMask));
 			
 			FallbackRenderLayerMask = unchecked((int)  ~presentPass.FromAtlasRenderLayerMask);
 			presentPass.FallbackRenderLayerMask =  unchecked((uint) FallbackRenderLayerMask);
@@ -319,11 +320,11 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 #region TexelSpaceRenderHelperInterface
 
 	public static TexelSpaceRenderFeature instance;
-	readonly List<TexelSpaceRenderHelper> visibleObjects = new List<TexelSpaceRenderHelper>();
+	readonly List<TexelSpaceRenderObject> visibleObjects = new List<TexelSpaceRenderObject>();
 
-	public void AddObject(TexelSpaceRenderHelper texelSpaceRenderHelper) {
+	public void AddObject(TexelSpaceRenderObject texelSpaceRenderObject) {
 		if (isActive) {
-			visibleObjects.Add(texelSpaceRenderHelper);
+			visibleObjects.Add(texelSpaceRenderObject);
 		}
 	}
 

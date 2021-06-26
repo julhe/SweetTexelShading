@@ -24,18 +24,19 @@ public class BitMaskPropertyDrawer : PropertyDrawer
 		position.xMin = labelEndX;
 		
 		int value = property.intValue;
-		const int bitRange = 32;
-		float widthPerField = position.width / (float) bitRange;
-		for (int i = 0; i < bitRange; i++) {
-			float i01 = i / (float) bitRange;
+		const int BIT_RANGE = 32;
+		float widthPerField = position.width / (float) BIT_RANGE;
+		for (int i = 0; i < BIT_RANGE; i++) {
+			float i01 = i / (float) BIT_RANGE;
 			Rect rect = new Rect(
 				Mathf.Lerp(position.xMax, position.xMin, 1f - i01),
 				position.y,
 				widthPerField,
 				position.height
 			);
-			
-			EditorGUI.Toggle(rect, ((1 << i) & value) == value);
+
+			int bitmask = 1 << i;
+			EditorGUI.Toggle(rect, (bitmask & value) == bitmask);
 		}
 
 	}

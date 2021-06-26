@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 [ExecuteInEditMode, DisallowMultipleComponent]
-public class TexelSpaceRenderHelper : MonoBehaviour
+public class TexelSpaceRenderObject : MonoBehaviour
 {
     MeshRenderer meshRenderer;
     [Header("Debug")] public int objectID;

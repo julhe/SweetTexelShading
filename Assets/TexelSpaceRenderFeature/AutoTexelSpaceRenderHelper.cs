@@ -13,8 +13,8 @@ public class AutoTexelSpaceRenderHelper : MonoBehaviour {
 		
 		foreach (var meshRenderer in GetComponentsInChildren<MeshRenderer>()) {
 
-			if (!meshRenderer.TryGetComponent(out TexelSpaceRenderHelper texelSpaceRenderHelper)) {
-				var renderHelper = meshRenderer.gameObject.AddComponent<TexelSpaceRenderHelper>();
+			if (!meshRenderer.TryGetComponent(out TexelSpaceRenderObject texelSpaceRenderHelper)) {
+				var renderHelper = meshRenderer.gameObject.AddComponent<TexelSpaceRenderObject>();
 			}
 		}
 	}
