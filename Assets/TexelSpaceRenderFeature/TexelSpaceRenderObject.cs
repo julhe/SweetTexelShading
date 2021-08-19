@@ -26,6 +26,9 @@ public class TexelSpaceRenderObject : MonoBehaviour
         matProbBlock = new MaterialPropertyBlock();
         Mesh mesh = GetComponent<MeshFilter>().sharedMesh;
         Debug.Assert(mesh);
+        if (!mesh) {
+            enabled = false;
+        }
         MeshUVDistributionMetric = mesh.GetUVDistributionMetric(1);
 
         // If the mesh has a transform scale or uvscale it would need to be applied here
@@ -74,6 +77,7 @@ public class TexelSpaceRenderObject : MonoBehaviour
     }
 
     public float GetEstimatedMipMapLevel(Camera camera, int texelCount) {
+        
         SetView(camera);
         return CalculateMipmapLevel(GetComponent<Renderer>().bounds, MeshUVDistributionMetric, texelCount);
     }
