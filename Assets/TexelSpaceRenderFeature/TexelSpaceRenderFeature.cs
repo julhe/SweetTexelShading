@@ -15,7 +15,10 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	
 	[Range(8, 13)] public int AtlasSizeExponent = 10;
 	[Range(-2f, 2f)] public float ShadingExponentBias = 0f;
+	[Range(-1f, 1f)] public float ShadingCameraBackfaceCulling = 0f;
 	[Range(1, 32)] public uint AtlasTimeSlicing;
+	public bool ForceFallbackToForward;
+
 	int MaxResolution => AtlasSizeAxis - 1;
 	
 	[Header("Debug"), Range(-1, 10)]
@@ -28,6 +31,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	public uint CurrentTimeSliceIndex;
 	[BitMaskPropertyAttribute]
 	public int InAtlasRenderedLayerMask, ToBeRenderedThisFrameMask, FallbackRenderLayerMask;
+
 
 	List<TexelSpaceRenderObject> objectsInCurrentAtlas = new List<TexelSpaceRenderObject>();
 
@@ -61,6 +65,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	uint lastRenderedFrameByCounter = 0;
 	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) {
 
+
 		RenderTextureCreateOrChange(ref vistaAtlas, AtlasSizeExponent);
 
 		lastRenderedFrameByUnity = Time.renderedFrameCount;
@@ -92,6 +97,10 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 
 			
 			for (int i = 0; i < visibleObjects.Count; i++) {
+				if (visibleObjects[i] == null) {
+					return; 
+				}
+				
 				float estimatedShadinDensityExponentInv = visibleObjects[i].GetEstimatedMipMapLevel(
 					renderingData.cameraData.camera,
 					atlasTexelSize);
@@ -164,14 +173,9 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			// (It doesn't seem to be possible to run the culling a second time)
 			
 			// TODO: clear the atlas after the present pass
-			presentPass.FallbackRenderLayerMask = uint.MaxValue;
-			presentPass.FromAtlasRenderLayerMask = 0;
-			texelSpaceShadingPass.RenderLayerMask = 0;
 
-			FallbackRenderLayerMask = unchecked((int) presentPass.FallbackRenderLayerMask);
-			ToBeRenderedThisFrameMask = 0;
-			InAtlasRenderedLayerMask = 0;
-			
+
+			EnableFallbackToForward();
 		}
 		else {
 			texelSpaceShadingPass.ShouldClearAltas = false;
@@ -188,12 +192,15 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			presentPass.FromAtlasRenderLayerMask =
 				unchecked((uint) (InAtlasRenderedLayerMask | ToBeRenderedThisFrameMask));
 			
-			FallbackRenderLayerMask = unchecked((int)  ~presentPass.FromAtlasRenderLayerMask);
+			FallbackRenderLayerMask = unchecked((int)  ~presentPass.FromAtlasRenderLayerMask | ToBeRenderedThisFrameMask );
 			presentPass.FallbackRenderLayerMask =  unchecked((uint) FallbackRenderLayerMask);
 
 			texelSpaceShadingPass.RenderLayerMask = unchecked((uint) ToBeRenderedThisFrameMask);
 		}
 
+		if (ForceFallbackToForward) {
+			EnableFallbackToForward();
+		}
 		// Enqueue Passes
 		// =============================================================================================================
 		renderer.EnqueuePass(texelSpaceShadingPass);
@@ -202,20 +209,21 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		visibleObjects.Clear();
 	}
 
+	void EnableFallbackToForward() {
+		presentPass.FallbackRenderLayerMask = uint.MaxValue;
+		presentPass.FromAtlasRenderLayerMask = 0;
+		texelSpaceShadingPass.RenderLayerMask = 0;
+		
+		FallbackRenderLayerMask = unchecked((int) presentPass.FallbackRenderLayerMask);
+		ToBeRenderedThisFrameMask = 0;
+		InAtlasRenderedLayerMask = 0;
+	}
+
 	static void LogTrace(object obj) {
 		Debug.Log(obj);
 	}
 
 
-	static CullingResults DoExtraCull(ScriptableRenderContext context, ref RenderingData renderingData) {
-		// NOTE/TODO: it
-		var cull = renderingData.cameraData.camera.TryGetCullingParameters(
-			renderingData.cameraData.xrRendering,
-			out ScriptableCullingParameters scriptableCullingParameters);
-		scriptableCullingParameters.cullingOptions |= CullingOptions.ForceEvenIfCameraIsNotActive;
-		var newCull = context.Cull(ref scriptableCullingParameters);
-		return newCull;
-	}
 
 
 	class TexelSpaceShadingPass : ScriptableRenderPass {
@@ -235,11 +243,11 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 				Parent.ClearAtlasWithRed ? Color.red : Color.clear);
 
 			cmd.SetGlobalTexture("g_VistaAtlas", TargetAtlas);
+			cmd.SetGlobalFloat("_Tss_BackfaceCulling", Parent.ShadingCameraBackfaceCulling);
 
 		}
 
 		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
-			var extraCull = DoExtraCull(context, ref renderingData);
 			CommandBuffer cmd = CommandBufferPool.Get("Texel-Shading Pass Pre");
 			cmd.SetGlobalFloat("_Tss_DebugView", Parent.DebugViewOverlay);
 			context.ExecuteCommandBuffer(cmd);
@@ -248,13 +256,14 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			// render the objects into the atlas
 			DrawingSettings drawingSettings =
 				CreateDrawingSettings(lightModeTexelSpacePass, ref renderingData, SortingCriteria.None);
-			drawingSettings.perObjectData = PerObjectData.ReflectionProbes | PerObjectData.Lightmaps | PerObjectData.LightProbe | PerObjectData.LightData | PerObjectData.OcclusionProbe | PerObjectData.ShadowMask;
+			drawingSettings.perObjectData
+				= PerObjectData.ReflectionProbes | PerObjectData.Lightmaps | PerObjectData.LightProbe | PerObjectData.LightData | PerObjectData.OcclusionProbe | PerObjectData.ShadowMask | PerObjectData.LightIndices;
 
 			FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all) {
 				renderingLayerMask = RenderLayerMask
 			};
-
-			context.DrawRenderers(extraCull, ref drawingSettings, ref filterSettings);
+			
+			context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filterSettings);
 		}
 	}
 	// In-Atlas pass

@@ -86,7 +86,7 @@ Shader "TexelShading/Standard"
 
 		sampler2D g_VistaAtlas;
 		
-		float _Tss_DebugView;
+		float _Tss_DebugView, _Tss_BackfaceCulling;
 		float4 _VistaAtlasScaleOffset;
 		float4 GetObjectAtlasScaleOffset()
 		{
@@ -230,9 +230,8 @@ Shader "TexelShading/Standard"
 				output.positionCS = float4(atlasCoord * 2.0 - 1.0, 0.0, 1.0);
 
 				// cull back facing geometry with a dirty trick...
-				if(dot(output.normalWS, output.viewDirWS) < 0.0) {
-						//TODO: verify behaviour on Quest.
-					//output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be renderd
+				if(dot(output.normalWS, output.viewDirWS) < _Tss_BackfaceCulling) {
+					output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be rendered
 				}
 
 				return output;
@@ -240,8 +239,8 @@ Shader "TexelShading/Standard"
 
             half4 frag(Varyings i) : SV_Target
 			{
-				UNITY_SETUP_INSTANCE_ID(i);
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+				//UNITY_SETUP_INSTANCE_ID(i);
+				//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 				half4 lit = LitPassFragment(i);
 				return lit;
 			}
