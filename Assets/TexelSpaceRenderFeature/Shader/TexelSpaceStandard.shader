@@ -104,6 +104,8 @@ Shader "TexelShading/Standard"
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma target 5.0
+			
+			#pragma shader_feature_local_fragment _ALPHATEST_ON
 
 			//--------------------------------------
             // GPU Instancing
@@ -141,10 +143,12 @@ Shader "TexelShading/Standard"
 			{
 				UNITY_SETUP_INSTANCE_ID(i);
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-				half4 atlas = tex2D(g_VistaAtlas, i.uv);		
+				half4 atlas = tex2D(g_VistaAtlas, i.uv);
+				#if defined(_ALPHATEST_ON)
+					clip(atlas.a - _Cutoff);
+				#endif
 				atlas.rgb /= max(0.0001, atlas.a);
 
-				
 				return lerp(atlas , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView);
 			}
 			ENDHLSL
@@ -231,7 +235,7 @@ Shader "TexelShading/Standard"
 
 				// cull back facing geometry with a dirty trick...
 				if(dot(output.normalWS, output.viewDirWS) < _Tss_BackfaceCulling) {
-					output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be rendered
+					//output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be rendered
 				}
 
 				return output;

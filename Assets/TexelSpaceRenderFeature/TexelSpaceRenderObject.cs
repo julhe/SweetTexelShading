@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 [ExecuteInEditMode, DisallowMultipleComponent]
 public class TexelSpaceRenderObject : MonoBehaviour
 {
-    MeshRenderer meshRenderer;
+    public MeshRenderer meshRenderer { get; private set; }
     [Header("Debug")] public int objectID;
     public int previousID;
 
@@ -17,6 +20,7 @@ public class TexelSpaceRenderObject : MonoBehaviour
     MaterialPropertyBlock matProbBlock;
     [Header("Debug - CPU Heuristic")] public int DesiredShadingDensityExponent;
     public int TimeSliceIndex;
+    public bool RejectedDueAtlasFull, RejectedDueSize; 
     [BitMaskProperty]
     public uint LayerMaskInMeshRenderer;
     public float MeshUVDistributionMetric;
@@ -29,7 +33,10 @@ public class TexelSpaceRenderObject : MonoBehaviour
         if (!mesh) {
             enabled = false;
         }
-        MeshUVDistributionMetric = mesh.GetUVDistributionMetric(1);
+        
+        
+        
+        MeshUVDistributionMetric = mesh.uv2 != null ? mesh.GetUVDistributionMetric(1) : mesh.GetUVDistributionMetric(0);
 
         // If the mesh has a transform scale or uvscale it would need to be applied here
 
@@ -45,20 +52,17 @@ public class TexelSpaceRenderObject : MonoBehaviour
     
     // Update is called once per frame
     void Update() {
-        if (TexelSpaceRenderFeature.instance == null) {
+        if (TexelSpaceRenderFeature.Instance == null) {
             return;
         }
-        
-        if (matProbBlock == null) {
-            matProbBlock = new MaterialPropertyBlock();
-        }
 
+        matProbBlock ??= new MaterialPropertyBlock();
     }
 
     void OnWillRenderObject() {
 
-        if (TexelSpaceRenderFeature.instance != null) {
-            TexelSpaceRenderFeature.instance.AddObject(this);
+        if (TexelSpaceRenderFeature.Instance != null) {
+            TexelSpaceRenderFeature.Instance.AddObject(this);
         }
         else {
             //TODO: only send this warning every x seconds to avoid Log spam with many objects
@@ -74,6 +78,16 @@ public class TexelSpaceRenderObject : MonoBehaviour
 
     void OnBecameInvisible() {
         IsVisible = false;
+    }
+
+    void OnValidate() {
+        #if UNITY_EDITOR
+            StaticEditorFlags gameObjectFlags = UnityEditor.GameObjectUtility.GetStaticEditorFlags(gameObject);
+            if (gameObjectFlags.HasFlag(StaticEditorFlags.BatchingStatic)) {
+                GameObjectUtility.SetStaticEditorFlags(gameObject, gameObjectFlags & ~StaticEditorFlags.BatchingStatic);
+                Debug.Log($"Disabled Static Batching to allow Texel-Space Rendering to work.", this);
+            }
+        #endif
     }
 
     public float GetEstimatedMipMapLevel(Camera camera, int texelCount) {
@@ -111,6 +125,7 @@ public class TexelSpaceRenderObject : MonoBehaviour
         m_CameraPosition = cameraPosition;
         m_CameraEyeToScreenDistanceSquared = Mathf.Pow(screenHalfHeight / Mathf.Tan(cameraHalfAngle), 2.0f);
 
+        
         // Switch to using the horizontal dimension if larger
         if (aspectRatio > 1.0f) {
             // Width is larger than height
@@ -132,7 +147,7 @@ public class TexelSpaceRenderObject : MonoBehaviour
         // - uv area is in normalised units (0->1 rather than 0->texture size)
 
         // m_CameraEyeToScreenDistanceSquared / dSq is the ratio of screen area to world space area
-
+        
         float v = (texelCount * distanceToCameraSqr) / (uvDistributionMetric * m_CameraEyeToScreenDistanceSquared);
         float desiredMipLevel = 0.5f * Mathf.Log(v, 2);
 
@@ -154,6 +169,12 @@ public class TexelSpaceRenderObject : MonoBehaviour
         if (meshRenderer != null)
         {
             meshRenderer.SetPropertyBlock(matProbBlock);
+        }
+    }
+
+    public class TexelSpaceRenderObjectShadingExponentComparer : Comparer<TexelSpaceRenderObject> {
+        public override int Compare(TexelSpaceRenderObject x, TexelSpaceRenderObject y) {
+            return y.DesiredShadingDensityExponent - x.DesiredShadingDensityExponent;
         }
     }
 }

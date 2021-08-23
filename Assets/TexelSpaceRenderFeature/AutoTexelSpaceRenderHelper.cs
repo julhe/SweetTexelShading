@@ -17,5 +17,7 @@ public class AutoTexelSpaceRenderHelper : MonoBehaviour {
 				var renderHelper = meshRenderer.gameObject.AddComponent<TexelSpaceRenderObject>();
 			}
 		}
+		
+
 	}
 }
