@@ -120,6 +120,8 @@ Shader "TexelShading/Standard"
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
 
+			float4 g_VistaAtlas_TexelSize;
+
 			v2f vert(Attributes input)
 			{
 				v2f output = (v2f)0;
@@ -149,6 +151,9 @@ Shader "TexelShading/Standard"
 				#endif
 				atlas.rgb /= max(0.0001, atlas.a);
 
+				//float area = length(max(ddx(i.uv * g_VistaAtlas_TexelSize.zw), ddy(i.uv * g_VistaAtlas_TexelSize.zw)));
+				//float4 debugColor = (area < 1.0 ? float4(1.0, 0.0, 0.0, 1.0) : float4(0.0, 1.0, 0.0, 1.0)) * abs(area);
+				//return debugColor;
 				return lerp(atlas , half4(0.0, 1, 0.0, 1.0), _Tss_DebugView);
 			}
 			ENDHLSL
@@ -213,6 +218,8 @@ Shader "TexelShading/Standard"
            // #pragma fragment frag
             #pragma fragment LitPassFragment
 
+            #pragma multi_compile _ TSS_CULL_VERTICES
+
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
 
@@ -233,10 +240,13 @@ Shader "TexelShading/Standard"
 			
 				output.positionCS = float4(atlasCoord * 2.0 - 1.0, 0.0, 1.0);
 
-				// cull back facing geometry with a dirty trick...
-				if(dot(output.normalWS, output.viewDirWS) < _Tss_BackfaceCulling) {
-					//output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be rendered
-				}
+
+				#if TSS_CULL_VERTICES
+					if(dot(output.normalWS, output.viewDirWS) < -0.15) {
+						output.positionCS = 1.0 / 0.0; //placing a NaN into the vertex position causes the triangle not to be rendered
+					}
+				#endif
+				
 
 				return output;
 			}

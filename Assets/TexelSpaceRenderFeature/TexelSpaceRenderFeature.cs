@@ -16,9 +16,8 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	//		 - Can't also use CommandBuffer.DrawRenderer, because some shader constants aren't set properly.
 	[Range(8, 13)] public int AtlasSizeExponent = 10;
 	[Range(-4f, 4f)] public float ShadingExponentBias = 0f;
-	[Range(-1f, 1f)] public float ShadingCameraBackfaceCulling = 0f;
+	public bool ShadingCullBackfacingVertices ;
 	[Range(1, 32)] public uint AtlasShadingTimeSlicing;
-	public uint AtlasShadingPostSleep;
 	public bool ForceFallbackToForward;
 
 	int MaxResolution => AtlasSizeAxis - 1;
@@ -28,6 +27,7 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 	[Range(0,1)] public float DebugViewOverlay = 0f;
 	public bool ClearAtlasWithRed;
 	public bool AlwaysClearAtlas;
+	public bool AllowClearAtlas = true;
 	public bool Pause;
 	public bool ReportAtlasInConsole;
 	[Header("Debug Outputs")] 
@@ -52,7 +52,6 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		TexelSpaceRenderObjectShadingExponentComparer =
 			new TexelSpaceRenderObject.TexelSpaceRenderObjectShadingExponentComparer();
 	public override void Create() {
-		
 		Debug.Assert(Instance == null || Instance == this, $"A instance of the {nameof(TexelSpaceRenderFeature)} is already active. There should be only one {nameof(TexelSpaceRenderFeature)} per project.");
 		Instance = this;
 		
@@ -286,13 +285,18 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 		public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor) {
 			ConfigureTarget(TargetAtlas);
 			ShouldClearAltas |= Parent.AlwaysClearAtlas;
+			ShouldClearAltas &= Parent.AllowClearAtlas;
 			ConfigureClear(
 				ShouldClearAltas ? ClearFlag.Color : ClearFlag.None, 
 				Parent.ClearAtlasWithRed ? new Color(1f, 0f, 0f, 0f): Color.clear);
 
 			cmd.SetGlobalTexture("g_VistaAtlas", TargetAtlas);
-			cmd.SetGlobalFloat("_Tss_BackfaceCulling", Parent.ShadingCameraBackfaceCulling);
-
+			if (Parent.ShadingCullBackfacingVertices) {
+				Shader.EnableKeyword("TSS_CULL_VERTICES");
+			}
+			else {
+				Shader.DisableKeyword("TSS_CULL_VERTICES");
+			}
 		}
 
 		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData) {
@@ -496,5 +500,15 @@ public class TexelSpaceRenderFeature : ScriptableRendererFeature {
 			hideFlags = HideFlags.DontSave
 		};
 		rt.Create();
+	}
+}
+
+public class SimpleRenderFeature : ScriptableRendererFeature {
+	public override void Create() {
+		// wird
+	}
+
+	public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData) {
+		// wird jedes einzelbild aufgerufen
 	}
 }

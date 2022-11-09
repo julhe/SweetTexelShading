@@ -6,7 +6,7 @@ using UnityEditor;
 #endif
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
-
+// based on: https://docs.unity3d.com/ScriptReference/Mesh.GetUVDistributionMetric.html
 [ExecuteInEditMode, DisallowMultipleComponent]
 public class TexelSpaceRenderObject : MonoBehaviour
 {
@@ -33,8 +33,6 @@ public class TexelSpaceRenderObject : MonoBehaviour
         if (!mesh) {
             enabled = false;
         }
-        
-        
         
         MeshUVDistributionMetric = mesh.uv2 != null ? mesh.GetUVDistributionMetric(1) : mesh.GetUVDistributionMetric(0);
 
@@ -110,10 +108,10 @@ public class TexelSpaceRenderObject : MonoBehaviour
     }
 
     // =================================================================================================================
-    private Vector3 m_CameraPosition;
-    private float m_CameraEyeToScreenDistanceSquared;
+    Vector3 m_CameraPosition;
+    float m_CameraEyeToScreenDistanceSquared;
 
-    private float m_TexelCount;
+    float m_TexelCount;
     
     public void SetView(Camera camera) {
         float cameraHA = Mathf.Deg2Rad * camera.fieldOfView * 0.5f;
